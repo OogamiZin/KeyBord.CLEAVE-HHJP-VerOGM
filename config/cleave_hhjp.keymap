@@ -57,7 +57,7 @@
 		compatible = "zmk,keymap";
 
 		default_layer {
-			display-name = "Default";
+			display-name = "Other0";
 			bindings = <
     &kp ESC  &kp N1   &kp N2   &kp N3   &kp N4   &kp N5   &kp N6                               &kp N7   &kp N8   &kp N9   &kp N0   &kp MINUS &kp EQUAL &kp INT3 &kp BSPC
     &kp TAB  &kp Q    &kp W    &kp E    &kp R    &kp T                                         &kp Y    &kp U    &kp I    &kp O    &kp P    &kp LBKT &kp RBKT &kp RET
@@ -68,7 +68,7 @@
 		};
 
 		fn_layer {
-			display-name = "Fn";
+			display-name = "Other1";
 			bindings = <
     &kp C_PWR &bt1    &bt2     &bt3     &bt4     &bt5     &kp F6                               &kp F7   &kp F8   &kp F9   &kp F10  &kp F11  &kp F12  &kp INS  &btclr
     &kp CAPS &trans   &trans   &trans   &trans   &trans                                        &trans   &trans   &kp PSCRN &kp SLCK &kp PAUSE_BREAK &kp UP &trans &trans
@@ -79,7 +79,7 @@
 		};
 
 		nav_layer {
-			display-name = "Nav";
+			display-name = "Other2";
 			bindings = <
     &trans   &trans   &trans   &trans   &trans   &trans   &trans                               &trans   &trans   &trans   &kp KP_SLASH &kp KP_MULTIPLY &trans &trans &trans
     &trans   &kp PG_UP &kp HOME &kp UP  &kp END  &trans                                        &trans   &kp N7   &kp N8   &kp N9   &kp KP_MINUS &trans &trans &trans
@@ -89,8 +89,8 @@
 			>;
 		};
 
-		extra_layer_3 {
-			display-name = "Extra1";
+		mac0_layer {
+			display-name = "Mac0";
 			status = "reserved";
 			bindings = <
     &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
@@ -101,8 +101,32 @@
 			>;
 		};
 
-		extra_layer_4 {
-			display-name = "Extra2";
+		mac1_layer {
+			display-name = "Mac1";
+			status = "reserved";
+			bindings = <
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+			>;
+		};
+
+		mac2_layer {
+			display-name = "Mac2";
+			status = "reserved";
+			bindings = <
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+			>;
+		};
+
+		system_layer {
+			display-name = "System";
 			status = "reserved";
 			bindings = <
     &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
