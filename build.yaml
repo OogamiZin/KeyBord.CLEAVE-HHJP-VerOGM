@@ -10,3 +10,18 @@ include:
     shield: cleave_hhjp_right rgbled_adapter
   - board: seeeduino_xiao_ble
     shield: settings_reset
+
+  # --- SoftDevice なし（nosd）版 ---
+  # RMK を一度書き込んだ XIAO に ZMK を戻すときはこちらを使う
+  - board: seeeduino_xiao_ble
+    shield: cleave_hhjp_left rgbled_adapter
+    cmake-args: -DSNIPPET="studio-rpc-usb-uart;nrf52840-nosd"
+    artifact-name: cleave_hhjp_left-nosd
+  - board: seeeduino_xiao_ble
+    shield: cleave_hhjp_right rgbled_adapter
+    snippet: nrf52840-nosd
+    artifact-name: cleave_hhjp_right-nosd
+  - board: seeeduino_xiao_ble
+    shield: settings_reset
+    snippet: nrf52840-nosd
+    artifact-name: settings_reset-nosd
