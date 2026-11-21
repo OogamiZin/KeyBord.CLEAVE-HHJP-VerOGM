@@ -4,7 +4,7 @@
 if SHIELD_CLEAVE_HHJP_LEFT
 
 config ZMK_KEYBOARD_NAME
-default "CLEAVE HHJP"
+default "CLEAVE-HHJP-vOGM"
 
 config ZMK_SPLIT_ROLE_CENTRAL
 	default y
