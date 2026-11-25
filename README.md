@@ -16,6 +16,8 @@
 
 - [ビルドガイド](build-guide/README.md)
   組み立て、ファームウェア書き込み、ケース作成、完成後の使い方、カスタマイズ方法をまとめています。
+- [キーマップ編集ツール](tools/keymap-editor/README.md)
+  ブラウザ上で`config/cleave_hhjp.keymap`の初期キーマップを編集し、全文を出力します。
 
 ## 関連リンク
 

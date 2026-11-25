@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLEAVE HHJP キーマップ編集</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: 自作キーボードの設定ツール、静かで正確に
+   IDEA 実物のキーキャップ配置図。JIS刻印（シフト側を左上に小さく）で読む
+   PICTURE 70キーの分割HHKB JPボードをそのまま大きく描き、各キーに割当を刻印
+   COLOUR stone地、白キャップ、墨の修飾キー、brickでレイヤー系と選択
+   TYPE Schibsted Grotesk + Noto Sans JP
+   LAYOUT 上にタイトルとレイヤータブ、ボード全幅、下に編集パネルとキーコード一覧の2列、最後に出力 */
+:root{color-scheme:light dark;--bg:light-dark(#e7e4df,#171513);--panel:light-dark(#ffffff,#211e1b);--ink:light-dark(#141210,#ece8e2);--mute:light-dark(#6b655d,#a39c92);--line:light-dark(#cfc9c0,#3a3631);--cap:light-dark(#fbfaf8,#2d2a26);--capedge:light-dark(#bdb6ac,#48433d);--dark:light-dark(#34312d,#4d4843);--darkink:#f4f1ec;--brick:light-dark(#c8371e,#ff6a4d);--brickbg:light-dark(#f6e0da,#3b211b);--blue:light-dark(#1f5fbf,#7fb0ff);--bluebg:light-dark(#e1eaf8,#1c2638)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 "Noto Sans JP","Schibsted Grotesk",system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3vw,40px) max(4vw,16px)}
+.wrap{max-width:1240px;margin:0 auto}
+h1{font:700 clamp(28px,4vw,42px)/1.05 "Schibsted Grotesk","Noto Sans JP",sans-serif;letter-spacing:-.02em;margin:0;text-wrap:balance}
+h2{font:700 20px/1.2 "Schibsted Grotesk","Noto Sans JP",sans-serif;margin:0 0 12px}
+a{color:var(--brick)}
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;justify-content:space-between;margin-bottom:18px}
+.meta{color:var(--mute);font-size:14px}
+.stat{display:flex;gap:18px;flex-wrap:wrap;font-size:14px;color:var(--mute)}
+.stat b{color:var(--ink);font:700 22px/1 "Schibsted Grotesk",sans-serif;display:block}
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px}
+.tab{font:500 15px/1 "Schibsted Grotesk","Noto Sans JP",sans-serif;padding:12px 14px;min-height:44px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;cursor:pointer}
+.tab small{color:var(--mute);margin-left:6px;font-size:13px}
+.tab[aria-selected=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab[aria-selected=true] small{color:inherit;opacity:.7}
+.boardbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;overflow-x:auto}
+.board{position:relative;margin:0 auto}
+.k{position:absolute;border-radius:7px;background:var(--cap);border:1px solid var(--capedge);box-shadow:0 3px 0 var(--capedge);color:var(--ink);cursor:pointer;padding:3px 5px;display:flex;flex-direction:column;justify-content:space-between;overflow:hidden;font-family:"Schibsted Grotesk","Noto Sans JP",sans-serif;text-align:left;transition:transform .08s}
+.k:hover{transform:translateY(-1px)}
+.k:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+.k .s{font-size:max(11px,calc(var(--u)*.2));color:var(--mute);line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k .m{font-weight:700;font-size:calc(var(--u)*.3);line-height:1.05;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.k .m.long{font-size:calc(var(--u)*.22)}
+.k.mod{background:var(--dark);border-color:#1d1b18;box-shadow:0 3px 0 #1d1b18;color:var(--darkink)}
+.k.mod .s{color:#c9c2b7}
+.k.layer{background:var(--brickbg);border-color:var(--brick);box-shadow:0 3px 0 var(--brick)}
+.k.layer .s{color:var(--brick)}
+.k.sys{background:var(--bluebg);border-color:var(--blue);box-shadow:0 3px 0 var(--blue)}
+.k.sys .s{color:var(--blue)}
+.k.trans{background:transparent;border-style:dashed;box-shadow:none;color:var(--mute)}
+.k.trans .m{font-weight:500;opacity:.75}
+.k.none{background:repeating-linear-gradient(135deg,transparent 0 6px,color-mix(in srgb,var(--line) 70%,transparent) 6px 7px);box-shadow:none;color:var(--mute)}
+.k.sel{outline:3px solid var(--ink);outline-offset:2px;z-index:2}
+.k.chg::after{content:"";position:absolute;right:4px;top:4px;width:7px;height:7px;border-radius:50%;background:var(--blue)}
+.k.warn::before{content:"!";position:absolute;right:3px;bottom:2px;font:700 12px/1 sans-serif;color:var(--brick)}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--mute);margin-top:12px}
+.legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid var(--capedge);background:var(--cap)}
+.cols{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px;margin-top:16px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px}
+.row{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+label.f{display:block;font-size:13px;color:var(--mute);margin:10px 0 4px}
+select,input[type=text],input[type=search],textarea{font:16px "Noto Sans JP",sans-serif;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:44px;width:100%}
+textarea{font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;min-height:260px;white-space:pre;overflow:auto}
+select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
+button.b{font:500 15px "Noto Sans JP",sans-serif;min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
+button.b:hover{border-color:var(--ink)}
+button.p{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button.on{background:var(--brick);color:#fff;border-color:var(--brick)}
+.pos{font:700 26px/1.1 "Schibsted Grotesk","Noto Sans JP",sans-serif}
+.raw{font-family:ui-monospace,Menlo,Consolas,monospace}
+.mods{display:flex;flex-wrap:wrap;gap:6px}
+.mods label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:0 10px;min-height:40px;font-size:14px;cursor:pointer}
+.mods input{width:18px;height:18px}
+.note{font-size:13px;color:var(--mute);margin:8px 0 0}
+.warnbox{font-size:14px;color:var(--brick);margin-top:8px}
+.cats{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.cat{font-size:14px;padding:6px 10px;min-height:36px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer}
+.cat[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.pal{display:grid;grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:6px;max-height:360px;overflow:auto;padding:2px}
+.pk{border:1px solid var(--capedge);background:var(--cap);border-radius:7px;min-height:52px;padding:4px 6px;text-align:left;cursor:pointer;color:var(--ink);display:flex;flex-direction:column;justify-content:space-between}
+.pk:hover{border-color:var(--ink)}
+.pk b{font:700 15px/1.1 "Schibsted Grotesk","Noto Sans JP",sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pk span{font:11px/1.1 ui-monospace,Menlo,monospace;color:var(--mute);overflow-wrap:anywhere}
+.pk.w{border-color:var(--brick)}
+.out{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px;margin-top:16px}
+.hide{display:none!important}
+@media(max-width:900px){.cols,.out{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.boardbox{padding:10px}.pos{font-size:22px}}
+@media(prefers-reduced-motion:reduce){.k{transition:none}}
+</style>
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <div class="top">
+    <div>
+      <h1>CLEAVE HHJP キーマップ編集</h1>
+      <div class="meta">ZMK用 <code>config/cleave_hhjp.keymap</code> の初期割り当てを作る · <a href="https://github.com/OogamiZin/KeyBord.CLEAVE-HHJP-VerOGM" target="_blank" rel="noopener">KeyBord.CLEAVE-HHJP-VerOGM</a></div>
+    </div>
+    <div class="stat">
+      <div><b id="stLayers">7</b>レイヤー</div>
+      <div><b id="stChg">0</b>変更キー</div>
+      <div><b id="stWarn">0</b>要確認</div>
+    </div>
+  </div>
+  <div class="tabs" id="tabs" role="tablist"></div>
+  <div class="boardbox"><div class="board" id="board"></div></div>
+  <div class="legend">
+    <span><i></i>キー</span><span><i style="background:var(--dark)"></i>修飾キー</span><span><i style="background:var(--brickbg);border-color:var(--brick)"></i>レイヤー操作</span><span><i style="background:var(--bluebg);border-color:var(--blue)"></i>BT・出力・システム</span><span><i style="background:transparent;border-style:dashed"></i>透過（下位レイヤーの値を薄く表示）</span><span><i style="background:var(--blue);border-radius:50%"></i>読込時から変更</span><span><b style="color:var(--brick)">!</b> JISホストで意図と違う文字が出る／未知のキーコード</span>
+  </div>
+
+  <div class="cols">
+    <section class="panel" aria-labelledby="edH">
+      <h2 id="edH">選択中のキー</h2>
+      <div class="row" style="justify-content:space-between"><div class="pos" id="edPos">—</div><div class="meta" id="edIdx"></div></div>
+      <label class="f" for="edBeh">動作（behavior）</label>
+      <select id="edBeh"></select>
+      <div id="edParams"></div>
+      <label class="f" for="edRaw">バインディング（直接編集可・Enterで確定）</label>
+      <input type="text" id="edRaw" class="raw" spellcheck="false" autocomplete="off">
+      <div id="edWarn" class="warnbox"></div>
+      <div class="row" style="margin-top:12px">
+        <button class="b" id="bTrans" type="button">透過にする</button>
+        <button class="b" id="bNone" type="button">無効にする</button>
+        <button class="b" id="bCopy" type="button">コピー</button>
+        <button class="b" id="bPaste" type="button">貼り付け</button>
+        <button class="b" id="bRevert" type="button">このキーを元に戻す</button>
+        <button class="b" id="bUndo" type="button">取り消し</button>
+      </div>
+      <p class="note">ショートカット：← → で隣のキー、Delete で透過、Ctrl/⌘+Z で取り消し、Ctrl/⌘+C / V でバインディングのコピー・貼り付け。</p>
+    </section>
+
+    <section class="panel" aria-labelledby="pkH">
+      <h2 id="pkH">キーコード</h2>
+      <div class="row">
+        <input type="search" id="pkQ" placeholder="検索（例: 変換, LANG, F12, vol）" style="flex:1 1 200px;width:auto">
+        <button class="b" id="pkCap" type="button">キーを押して指定</button>
+      </div>
+      <div class="cats" id="cats"></div>
+      <div class="pal" id="pal"></div>
+      <p class="note">表示はWindows/macOSでJIS配列として認識させた場合の刻印です。クリックで選択中キーのタップ側に入ります。</p>
+    </section>
+  </div>
+
+  <section class="panel" style="margin-top:16px" aria-labelledby="lyH">
+    <h2 id="lyH">レイヤー設定</h2>
+    <div class="row">
+      <div style="flex:1 1 220px"><label class="f" for="lyName">表示名（display-name）</label><input type="text" id="lyName"></div>
+      <div style="flex:1 1 220px"><label class="f" for="lyNode">ノード名</label><input type="text" id="lyNode" class="raw"></div>
+      <label style="display:flex;gap:8px;align-items:center;min-height:44px;margin-top:26px"><input type="checkbox" id="lyRes" style="width:18px;height:18px">status = "reserved"</label>
+    </div>
+    <div class="row">
+      <select id="lySrc" style="width:auto;flex:0 1 220px"></select>
+      <label style="display:flex;gap:6px;align-items:center;font-size:14px"><input type="checkbox" id="lyShift" checked style="width:18px;height:18px">レイヤー参照を対応先へ付け替え（例 Other1→Mac1）</label>
+      <button class="b" id="lyCopy" type="button">このレイヤーへ複製</button>
+      <button class="b" id="lyClear" type="button">全キーを透過に</button>
+    </div>
+    <p class="note">reserved はZMK Studioで後から有効化する予約レイヤーの指定です。Mac系レイヤーへ割り当てを入れる場合は、使い方に合わせて外してください。</p>
+  </section>
+
+  <div class="out">
+    <section class="panel" aria-labelledby="exH">
+      <h2 id="exH">出力（cleave_hhjp.keymap 全文）</h2>
+      <div class="row">
+        <button class="b p" id="exCopy" type="button">全文をコピー</button>
+        <a class="b" style="display:inline-flex;align-items:center;text-decoration:none;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px 14px;min-height:44px" href="https://github.com/OogamiZin/KeyBord.CLEAVE-HHJP-VerOGM/edit/main/config/cleave_hhjp.keymap" target="_blank" rel="noopener">GitHubで編集を開く</a>
+        <span id="exMsg" class="meta"></span>
+      </div>
+      <textarea id="exTxt" readonly spellcheck="false" aria-label="生成されたkeymap"></textarea>
+      <p class="note">behaviorsブロックやinclude等は読み込んだファイルのまま残し、keymapノードだけを書き換えます。&amp;out使用時は outputs.h を自動で追加します。ZMK Studioで保存済みの設定がある場合は、書き込み後に Restore Stock Settings か settings_reset が必要です。</p>
+    </section>
+    <section class="panel" aria-labelledby="imH">
+      <h2 id="imH">読み込み</h2>
+      <p class="note" style="margin-top:0">現在の .keymap を貼り付けるか、ファイルを選んで読み込みます。初期状態はGitHub mainの最新 .keymap を取得し、取得できない環境では埋め込み版を使います。</p>
+      <textarea id="imTxt" spellcheck="false" placeholder="ここに .keymap の全文を貼り付け" style="min-height:180px"></textarea>
+      <div class="row" style="margin-top:10px">
+        <button class="b p" id="imGo" type="button">貼り付けた内容を読み込む</button>
+        <input type="file" id="imFile" accept=".keymap,.dtsi,.txt" style="max-width:240px">
+        <button class="b" id="imStock" type="button">リポジトリの初期状態に戻す</button>
+      </div>
+      <div id="imMsg" class="meta"></div>
+    </section>
+  </div>
+</div></div>
+
+<script type="text/plain" id="stock">
+/*
+ * Copyright (c) 2025
+ * SPDX-License-Identifier: MIT
+ */
+
+#include <behaviors.dtsi>
+#include <dt-bindings/zmk/keys.h>
+#include <dt-bindings/zmk/bt.h>
+
+/ {
+	behaviors {
+		bt1: bluetooth_morph_1 {
+			compatible = "zmk,behavior-mod-morph";
+			label = "BT_MORPH_1";
+			#binding-cells = <0>;
+			bindings = <&kp F1>, <&bt BT_SEL 0>;
+			mods = <(MOD_LCTL|MOD_RCTL)>;
+		};
+		bt2: bluetooth_morph_2 {
+			compatible = "zmk,behavior-mod-morph";
+			label = "BT_MORPH_2";
+			#binding-cells = <0>;
+			bindings = <&kp F2>, <&bt BT_SEL 1>;
+			mods = <(MOD_LCTL|MOD_RCTL)>;
+		};
+		bt3: bluetooth_morph_3 {
+			compatible = "zmk,behavior-mod-morph";
+			label = "BT_MORPH_3";
+			#binding-cells = <0>;
+			bindings = <&kp F3>, <&bt BT_SEL 2>;
+			mods = <(MOD_LCTL|MOD_RCTL)>;
+		};
+		bt4: bluetooth_morph_4 {
+			compatible = "zmk,behavior-mod-morph";
+			label = "BT_MORPH_4";
+			#binding-cells = <0>;
+			bindings = <&kp F4>, <&bt BT_SEL 3>;
+			mods = <(MOD_LCTL|MOD_RCTL)>;
+		};
+		bt5: bluetooth_morph_5 {
+			compatible = "zmk,behavior-mod-morph";
+			label = "BT_MORPH_5";
+			#binding-cells = <0>;
+			bindings = <&kp F5>, <&bt BT_SEL 4>;
+			mods = <(MOD_LCTL|MOD_RCTL)>;
+		};
+		btclr: bluetooth_clear_morph {
+			compatible = "zmk,behavior-mod-morph";
+			label = "BT_CLR_MORPH";
+			#binding-cells = <0>;
+			bindings = <&kp DEL>, <&bt BT_CLR>;
+			mods = <(MOD_LCTL|MOD_RCTL)>;
+		};
+	};
+
+	keymap {
+		compatible = "zmk,keymap";
+
+		default_layer {
+			display-name = "Other0";
+			bindings = <
+    &kp ESC  &kp N1   &kp N2   &kp N3   &kp N4   &kp N5   &kp N6                               &kp N7   &kp N8   &kp N9   &kp N0   &kp MINUS &kp EQUAL &kp INT3 &kp BSPC
+    &kp TAB  &kp Q    &kp W    &kp E    &kp R    &kp T                                         &kp Y    &kp U    &kp I    &kp O    &kp P    &kp LBKT &kp RBKT &kp RET
+    &kp LCTRL &kp A   &kp S    &kp D    &kp F    &kp G                                         &kp H    &kp J    &kp K    &kp L    &kp SEMI &kp SQT  &kp BSLH
+    &kp LSHFT &kp Z   &kp X    &kp C    &kp V    &kp B                                         &kp N    &kp M    &kp COMMA &kp DOT &kp FSLH &kp INT1 &kp UP  &kp RSHFT
+    &mo 1    &kp LGUI &mo 2    &kp LALT &kp LANG2 &kp SPACE                                     &kp SPACE &kp LANG1 &mo 2    &kp RALT &mo 1   &kp LEFT &kp DOWN &kp RIGHT
+			>;
+		};
+
+		fn_layer {
+			display-name = "Other1";
+			bindings = <
+    &kp C_PWR &bt1    &bt2     &bt3     &bt4     &bt5     &kp F6                               &kp F7   &kp F8   &kp F9   &kp F10  &kp F11  &kp F12  &kp INS  &btclr
+    &kp CAPS &trans   &trans   &trans   &trans   &trans                                        &trans   &trans   &kp PSCRN &kp SLCK &kp PAUSE_BREAK &kp UP &trans &trans
+    &trans   &kp C_VOL_DN &kp C_VOL_UP &kp C_MUTE &kp C_EJECT &trans                          &kp STAR &kp FSLH &kp HOME &kp PG_UP &kp LEFT &kp RIGHT &trans
+    &trans   &trans   &trans   &trans   &trans   &trans                                        &kp PLUS &kp MINUS &kp END &kp PG_DN &kp DOWN &trans   &trans   &trans
+    &trans   &trans   &trans   &trans   &trans   &trans                                        &trans   &trans   &trans   &trans   &trans   &trans   &trans   &trans
+			>;
+		};
+
+		nav_layer {
+			display-name = "Other2";
+			bindings = <
+    &trans   &trans   &trans   &trans   &trans   &trans   &trans                               &trans   &trans   &trans   &kp KP_SLASH &kp KP_MULTIPLY &trans &trans &trans
+    &trans   &kp PG_UP &kp HOME &kp UP  &kp END  &trans                                        &trans   &kp N7   &kp N8   &kp N9   &kp KP_MINUS &trans &trans &trans
+    &trans   &kp PG_DN &kp LEFT &kp DOWN &kp RIGHT &trans                                      &trans   &kp N4   &kp N5   &kp N6   &kp KP_PLUS &trans &trans
+    &trans   &kp LC(Z) &kp LC(X) &kp LC(C) &kp LC(V) &kp LC(Y)                                 &trans   &kp N1   &kp N2   &kp N3   &kp KP_ENTER &trans &trans &trans
+    &trans   &trans   &trans   &trans   &trans   &trans                                        &kp N0   &kp KP_DOT &trans  &trans   &trans   &trans   &trans   &trans
+			>;
+		};
+
+		mac0_layer {
+			display-name = "Mac0";
+			status = "reserved";
+			bindings = <
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+			>;
+		};
+
+		mac1_layer {
+			display-name = "Mac1";
+			status = "reserved";
+			bindings = <
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+			>;
+		};
+
+		mac2_layer {
+			display-name = "Mac2";
+			status = "reserved";
+			bindings = <
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+			>;
+		};
+
+		system_layer {
+			display-name = "System";
+			status = "reserved";
+			bindings = <
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+    &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans &trans
+			>;
+		};
+	};
+};
+</script>
+<script>
+{
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const ROWS=[15,14,13,14,14],LEFT=[7,6,6,6,6];
+const PHYS=[[100,100,0,0],[100,100,100,0],[100,100,200,0],[100,100,300,0],[100,100,400,0],[100,100,500,0],[100,100,600,0],[100,100,800,0],[100,100,900,0],[100,100,1000,0],[100,100,1100,0],[100,100,1200,0],[100,100,1300,0],[100,100,1400,0],[100,100,1500,0],
+[150,100,0,100],[100,100,150,100],[100,100,250,100],[100,100,350,100],[100,100,450,100],[100,100,550,100],[100,100,800,100],[100,100,900,100],[100,100,1000,100],[100,100,1100,100],[100,100,1200,100],[100,100,1300,100],[100,100,1400,100],[125,200,1500,100],
+[175,100,0,200],[100,100,175,200],[100,100,275,200],[100,100,375,200],[100,100,475,200],[100,100,575,200],[100,100,800,200],[100,100,900,200],[100,100,1000,200],[100,100,1100,200],[100,100,1200,200],[100,100,1300,200],[100,100,1400,200],
+[200,100,0,300],[100,100,200,300],[100,100,300,300],[100,100,400,300],[100,100,500,300],[100,100,600,300],[100,100,800,300],[100,100,900,300],[100,100,1000,300],[100,100,1100,300],[100,100,1200,300],[100,100,1300,300],[100,100,1400,300],[100,100,1500,300],
+[100,100,0,400],[100,100,125,400],[100,100,225,400],[100,100,325,400],[100,100,425,400],[125,100,525,400],[125,100,800,400],[100,100,925,400],[100,100,1025,400],[100,100,1125,400],[100,100,1225,400],[100,100,1350,400],[100,100,1450,400],[100,100,1550,400]];
+const PNAME="Esc,1,2,3,4,5,6,7,8,9,0,-,^,¥,BS,Tab,Q,W,E,R,T,Y,U,I,O,P,@,[,Enter,Ctrl,A,S,D,F,G,H,J,K,L,;,:,],左Shift,Z,X,C,V,B,N,M,<,>,/,_,↑,右Shift,左Fn,Win,Cmd,左Alt,左英/日,左Space,右Space,右英/日,かな,右Alt,右Fn,←,↓,→".split(',');
+const posName=i=>{let r=0,c=i;while(c>=ROWS[r]){c-=ROWS[r];r++}return{r,c,side:c<LEFT[r]?'左':'右'}};
+
+/* キーコードDB: [code, 表示, シフト刻印, カテゴリ, 別名...] */
+const DB=[];const add=(cat,list)=>list.forEach(a=>DB.push({c:a[0],l:a[1],sh:a[2]||'',cat,al:a.slice(3)}));
+add('英字',"ABCDEFGHIJKLMNOPQRSTUVWXYZ".split('').map(x=>[x,x]));
+add('数字',[['N1','1','!','NUMBER_1'],['N2','2','"','NUMBER_2'],['N3','3','#','NUMBER_3'],['N4','4','$','NUMBER_4'],['N5','5','%','NUMBER_5'],['N6','6','&','NUMBER_6'],['N7','7',"'",'NUMBER_7'],['N8','8','(','NUMBER_8'],['N9','9',')','NUMBER_9'],['N0','0','','NUMBER_0']]);
+add('記号(JIS)',[['MINUS','-','='],['EQUAL','^','~'],['INT3','¥','|','INT_YEN'],['LBKT','@','`','LEFT_BRACKET'],['RBKT','[','{','RIGHT_BRACKET'],['SEMI',';','+','SEMICOLON'],['SQT',':','*','SINGLE_QUOTE','APOS'],['BSLH',']','}','BACKSLASH'],['NUHS',']','}','NON_US_HASH'],['COMMA',',','<'],['DOT','.','>','PERIOD'],['FSLH','/','?','SLASH'],['INT1','\\','_','INT_RO']]);
+add('日本語',[['LANG1','かな','','LANG_HANGEUL'],['LANG2','英数','','LANG_HANJA'],['GRAVE','半/全','','GRAVE'],['INT4','変換','','INT_HENKAN'],['INT5','無変換','','INT_MUHENKAN'],['INT2','カナ','','INT_KATAKANAHIRAGANA']]);
+add('編集',[['ESC','Esc','','ESCAPE'],['TAB','Tab'],['RET','Enter','','ENTER','RETURN'],['SPACE','Space','','SPC'],['BSPC','BS','','BACKSPACE'],['DEL','Del','','DELETE'],['INS','Ins','','INSERT'],['CAPS','Caps','','CAPSLOCK','CLCK'],['K_APP','App','','K_APPLICATION','K_CONTEXT_MENU']]);
+add('移動',[['UP','↑','','UP_ARROW'],['DOWN','↓','','DOWN_ARROW'],['LEFT','←','','LEFT_ARROW'],['RIGHT','→','','RIGHT_ARROW'],['HOME','Home'],['END','End'],['PG_UP','PgUp','','PAGE_UP'],['PG_DN','PgDn','','PAGE_DOWN']]);
+add('修飾',[['LCTRL','Ctrl','L','LCTL','LEFT_CONTROL'],['LSHFT','Shift','L','LSHIFT','LEFT_SHIFT'],['LALT','Alt','L','LEFT_ALT'],['LGUI','Win','L','LCMD','LWIN','LMETA','LEFT_GUI'],['RCTRL','Ctrl','R','RCTL','RIGHT_CONTROL'],['RSHFT','Shift','R','RSHIFT','RIGHT_SHIFT'],['RALT','Alt','R','RIGHT_ALT'],['RGUI','Win','R','RCMD','RWIN','RMETA','RIGHT_GUI']]);
+add('F',Array.from({length:24},(_,i)=>['F'+(i+1),'F'+(i+1)]));
+add('テンキー',[...Array.from({length:10},(_,i)=>['KP_N'+i,String(i),'Num','KP_NUMBER_'+i]),['KP_DOT','.','Num','KP_PERIOD'],['KP_PLUS','+','Num'],['KP_MINUS','-','Num','KP_SUBTRACT'],['KP_MULTIPLY','*','Num','KP_ASTERISK'],['KP_SLASH','/','Num','KP_DIVIDE'],['KP_ENTER','Ent','Num'],['KP_EQUAL','=','Num'],['KP_NUM','NumLk','','KP_NUMLOCK','KP_NLCK']]);
+add('システム',[['PSCRN','PrtSc','','PRINTSCREEN'],['SLCK','ScrLk','','SCROLLLOCK'],['PAUSE_BREAK','Pause','','PAUSE'],['C_PWR','電源','','C_POWER']]);
+add('メディア',[['C_VOL_UP','音量+','','C_VOLUME_UP'],['C_VOL_DN','音量−','','C_VOLUME_DOWN'],['C_MUTE','ミュート'],['C_PP','再生/停','','C_PLAY_PAUSE'],['C_NEXT','次曲'],['C_PREV','前曲','','C_PREVIOUS'],['C_STOP','停止'],['C_EJECT','取出'],['C_BRI_UP','明るさ+','','C_BRIGHTNESS_INC'],['C_BRI_DN','明るさ−','','C_BRIGHTNESS_DEC']]);
+/* US配列名の記号（暗黙Shift）。JISホストでは別の文字になるものがある */
+const US={EXCL:['N1','!'],AT:['N2','@'],HASH:['N3','#'],DLLR:['N4','$'],PRCNT:['N5','%'],CARET:['N6','^'],AMPS:['N7','&'],STAR:['N8','*'],ASTRK:['N8','*'],LPAR:['N9','('],RPAR:['N0',')'],UNDER:['MINUS','_'],PLUS:['EQUAL','+'],LBRC:['LBKT','{'],RBRC:['RBKT','}'],PIPE:['BSLH','|'],COLON:['SEMI',':'],DQT:['SQT','"'],TILDE:['GRAVE','~'],LT:['COMMA','<'],GT:['DOT','>'],QMARK:['FSLH','?']};
+const BYC={};DB.forEach(d=>{BYC[d.c]=d;d.al.forEach(a=>{if(!BYC[a])BYC[a]=d})});
+const usJis=n=>{const u=US[n],b=BYC[u[0]];const out=b.sh||'(なし)';return{out,want:u[1],warn:out!==u[1]}};
+add('US記号(注意)',Object.keys(US).filter(k=>k!=='ASTRK').map(k=>{const r=usJis(k);return[k,r.out,'US:'+r.want]}));
+DB.forEach(d=>{if(d.cat==='US記号(注意)'){d.us=true;BYC[d.c]=d}});
+const CATS=[...new Set(DB.map(d=>d.cat))];
+const MODF={LC:'LCTRL',LS:'LSHFT',LA:'LALT',LG:'LGUI',RC:'RCTRL',RS:'RSHFT',RA:'RALT',RG:'RGUI'};
+const MODS=Object.keys(MODF);
+
+let st=null,base=null,sel=0,cur=0,clip=null,undo=[],capture=false,cat='英字';
+const isMac=li=>/^mac/i.test(st.layers[li]?.name||'');
+const unwrap=code=>{const mods=[];let c=code;let m;while((m=/^(LC|LS|LA|LG|RC|RS|RA|RG)\((.*)\)$/.exec(c))){mods.push(m[1]);c=m[2]}return{mods,base:c}};
+const wrap=(mods,b)=>MODS.filter(m=>mods.includes(m)).reduceRight((a,m)=>m+'('+a+')',b);
+const pb=s=>{const m=/^&(\S+)\s*(.*)$/.exec(s.trim());if(!m)return{beh:'',args:[]};return{beh:m[1],args:m[2]?m[2].split(/\s+/):[]}};
+const modLbl=(m,mac)=>({LC:'Ctrl',RC:'Ctrl',LS:'Shift',RS:'Shift',LA:mac?'⌥':'Alt',RA:mac?'⌥':'Alt',LG:mac?'⌘':'Win',RG:mac?'⌘':'Win'}[m]);
+function keyInfo(code,mac){
+  const {mods,base:b}=unwrap(code||'');const d=BYC[b];let l,sh='',warn='',isMod=false;
+  if(!d){l=b||'?';warn='未知のキーコード: '+b}
+  else if(d.us){const r=usJis(d.c);l=r.out;sh='Shift+'+BYC[US[d.c][0]].l;if(r.warn)warn=d.c+' はUS配列の「'+r.want+'」ですが、JISホストでは「'+r.out+'」になります'}
+  else{l=d.l;sh=d.sh;if(d.cat==='修飾'){isMod=true;if(mac&&d.c.endsWith('GUI'))l='⌘';if(mac&&d.c.endsWith('ALT'))l='⌥';sh=d.sh==='L'?'左':'右'}}
+  if(mods.length){sh=mods.map(m=>modLbl(m,mac)).join('+')+'+';}
+  return{l,sh,warn,isMod};
+}
+const lname=n=>{const i=+n;return st.layers[i]?st.layers[i].name:'L'+n};
+function custom(){const out={};const t=st.src.slice(0,st.ks);const re=/(\w+)\s*:\s*[\w\-]+\s*\{([^{}]*)\}/g;let m;while((m=re.exec(t))){const body=m[2];const cells=/#binding-cells\s*=\s*<(\d)>/.exec(body);if(!cells||cells[1]!=='0')continue;const bs=[...body.matchAll(/<\s*(&[^>]+?)\s*>/g)].map(x=>x[1]);out[m[1]]={bindings:/mod-morph/.test(body)?bs.filter(x=>x.startsWith('&')):[]}}return out}
+let CUST={};
+const SYS={bootloader:'ブート',sys_reset:'リセット',studio_unlock:'Studio解錠',caps_word:'CapsWord',key_repeat:'リピート',soft_off:'電源OFF'};
+function label(bind,li,depth){
+  const {beh,args}=pb(bind);const mac=isMac(li);
+  const L=(m,s,cls,w)=>({m,s,cls,w:w||''});
+  switch(beh){
+    case 'kp':{const k=keyInfo(args[0],mac);return L(k.l,k.sh,k.isMod&&!unwrap(args[0]).mods.length?'mod':'',k.warn)}
+    case 'mo':return L(lname(args[0]),'押下中','layer');
+    case 'tog':return L(lname(args[0]),'切替','layer');
+    case 'to':return L(lname(args[0]),'移動','layer');
+    case 'sl':return L(lname(args[0]),'1回','layer');
+    case 'lt':{const k=keyInfo(args[1],mac);return L(k.l,'長押し '+lname(args[0]),'layer',k.warn)}
+    case 'mt':{const k=keyInfo(args[1],mac),h=keyInfo(args[0],mac);return L(k.l,'長押し '+h.l,'mod',k.warn)}
+    case 'sk':{const k=keyInfo(args[0],mac);return L(k.l,'1回','mod',k.warn)}
+    case 'trans':return label2(bind,li,(depth||0)+1);
+    case 'none':return L('—','無効','none');
+    case 'bt':{const a=args[0];const n=args[1]!=null?(+args[1]+1):'';const t={BT_SEL:'BT'+n,BT_CLR:'BT消去',BT_CLR_ALL:'BT全消去',BT_NXT:'BT次',BT_PRV:'BT前',BT_DISC:'BT切断'+n}[a]||a;return L(t,'Bluetooth','sys')}
+    case 'out':return L({OUT_USB:'USB',OUT_BLE:'BLE',OUT_TOG:'USB⇄BLE'}[args[0]]||args[0],'出力先','sys');
+    default:
+      if(SYS[beh])return L(SYS[beh],'&'+beh,'sys');
+      if(CUST[beh]){const c=CUST[beh];if(c.bindings.length>=2){const a=label(c.bindings[0],li,9),b=label(c.bindings[1],li,9);return L(a.m,'Ctrl: '+b.m,'sys',a.w)}return L(beh,'カスタム','sys')}
+      return L(beh?('&'+beh):'?','未対応','','解析できないバインディング');
+  }
+}
+
+/* ---- 解析 ---- */
+function match(t,i){let d=0;for(let j=i;j<t.length;j++){if(t[j]==='{')d++;else if(t[j]==='}'){d--;if(!d)return j}}return -1}
+function parse(text){
+  const m=/(^|[\s;}])keymap\s*\{/m.exec(text);if(!m)throw new Error('keymap ノードが見つかりません');
+  const ks=m.index+m[1].length,open=text.indexOf('{',ks),close=match(text,open);if(close<0)throw new Error('keymap の括弧が閉じていません');
+  let ke=close+1;const sc=/^\s*;/.exec(text.slice(ke));if(sc)ke+=sc[0].length;
+  const inner=text.slice(open+1,close);const layers=[];const re=/([A-Za-z0-9_\-]+)\s*\{/g;let x;const warns=[];
+  while((x=re.exec(inner))){const o=inner.indexOf('{',x.index),c=match(inner,o);if(c<0)break;const body=inner.slice(o+1,c);re.lastIndex=c+1;
+    const dn=/display-name\s*=\s*"([^"]*)"\s*;/.exec(body);const bm=/(^|[^\w-])bindings\s*=\s*<([\s\S]*?)>\s*;/.exec(body);if(!bm)continue;
+    let rest=body.replace(/display-name\s*=\s*"[^"]*"\s*;/,'').replace(bm[0],bm[1]);
+    const extra=rest.replace(/\/\*[\s\S]*?\*\//g,'').split(';').map(s=>s.replace(/\/\/.*$/gm,'').trim()).filter(Boolean).map(s=>s+';');
+    const raw=bm[2].replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/.*$/gm,'');
+    let b=raw.trim().split(/\s*(?=&)/).map(s=>s.trim().replace(/\s+/g,' ')).filter(Boolean);
+    if(b.length!==70){warns.push(x[1]+': '+b.length+'キー（70に調整）');while(b.length<70)b.push('&trans');b=b.slice(0,70)}
+    layers.push({node:x[1],name:dn?dn[1]:x[1],extra,b});
+  }
+  if(!layers.length)throw new Error('レイヤーが見つかりません');
+  return{src:text,ks,ke,layers,warns};
+}
+/* ---- 生成 ---- */
+function gen(){
+  const w=Math.max(10,...st.layers.flatMap(l=>l.b.map(s=>s.length+1)));
+  let o='keymap {\n\t\tcompatible = "zmk,keymap";\n';
+  st.layers.forEach(l=>{
+    o+='\n\t\t'+l.node+' {\n\t\t\tdisplay-name = "'+l.name.replace(/"/g,'')+'";\n';
+    l.extra.forEach(e=>o+='\t\t\t'+e+'\n');
+    o+='\t\t\tbindings = <\n';let i=0;
+    ROWS.forEach((n,r)=>{const row=l.b.slice(i,i+n);i+=n;const lt=row.slice(0,LEFT[r]).map(s=>s.padEnd(w)).join('');const rt=row.slice(LEFT[r]).map(s=>s.padEnd(w)).join('').trimEnd();o+='    '+lt.padEnd(7*w+4)+rt+'\n'});
+    o+='\t\t\t>;\n\t\t};\n';
+  });
+  o+='\t};';
+  let pre=st.src.slice(0,st.ks),post=st.src.slice(st.ke);
+  const all=st.layers.flatMap(l=>l.b).join(' ');
+  const need=[['&out ','dt-bindings/zmk/outputs.h'],['&bt ','dt-bindings/zmk/bt.h']];
+  need.forEach(([k,h])=>{if((all+' ').includes(k)&&!pre.includes(h)){const inc=[...pre.matchAll(/#include[^\n]*\n/g)].pop();const at=inc?inc.index+inc[0].length:0;pre=pre.slice(0,at)+'#include <'+h+'>\n'+pre.slice(at)}});
+  return pre+o+post;
+}
+
+/* ---- 保存 ---- */
+const KEY='cleave-hhjp-zmk-editor-v1';
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({st,base,cur,sel}))}catch(e){}};
+function load(){try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&j.st&&j.st.layers){st=j.st;base=j.base;cur=j.cur||0;sel=j.sel||0;return true}}catch(e){}return false}
+function setSrc(text){const p=parse(text);st={src:p.src,ks:p.ks,ke:p.ke,layers:p.layers};base=p.layers.map(l=>l.b.slice());cur=0;sel=0;undo=[];CUST=custom();return p.warns}
+const push=()=>{undo.push(JSON.stringify(st.layers));if(undo.length>200)undo.shift()};
+function setB(s){s=s.trim().replace(/\s+/g,' ');if(!s.startsWith('&'))s='&'+s;if(st.layers[cur].b[sel]===s)return;push();st.layers[cur].b[sel]=s;render()}
+
+/* ---- 描画 ---- */
+let U=52;
+function renderTabs(){$('tabs').innerHTML=st.layers.map((l,i)=>'<button class="tab" role="tab" type="button" data-i="'+i+'" aria-selected="'+(i===cur)+'">'+esc(l.name)+'<small>'+i+(l.extra.some(e=>/reserved/.test(e))?' 予約':'')+'</small></button>').join('')}
+function render(){
+  renderTabs();
+  const realCur=cur;
+  const B=$('board');const box=B.parentElement;U=Math.max(36,Math.min(62,Math.floor((box.clientWidth-32)/16.5)));
+  B.style.width=16.5*U+'px';B.style.height=5*U+6+'px';B.style.setProperty('--u',U+'px');
+  let html='';
+  PHYS.forEach((p,i)=>{const b=st.layers[realCur].b[i];const lb=labelAt(b,realCur,i);const chg=base&&base[realCur]&&base[realCur][i]!==b;
+    html+='<button type="button" class="k '+lb.cls+(i===sel?' sel':'')+(chg?' chg':'')+(lb.w?' warn':'')+'" data-i="'+i+'" style="left:'+(p[2]/100*U)+'px;top:'+(p[3]/100*U)+'px;width:'+(p[0]/100*U-5)+'px;height:'+(p[1]/100*U-5)+'px" title="'+esc(PNAME[i]+' : '+b+(lb.w?' / '+lb.w:''))+'"><span class="s">'+esc(lb.s||' ')+'</span><span class="m'+(String(lb.m).length>5?' long':'')+'">'+esc(lb.m)+'</span></button>'});
+  B.innerHTML=html;
+  let chg=0,wn=0;st.layers.forEach((l,li)=>l.b.forEach((b,i)=>{if(base&&base[li]&&base[li][i]!==b)chg++;if(labelAt(b,li,i).w)wn++}));
+  $('stLayers').textContent=st.layers.length;$('stChg').textContent=chg;$('stWarn').textContent=wn;
+  renderEditor();renderLayer();$('exTxt').value=gen();save();
+}
+let POS=0;
+function labelAt(b,li,i){POS=i;return label2(b,li,0)}
+function label2(b,li,d){const {beh}=pb(b);if(beh==='trans'){for(let j=li-1;j>=0;j--){const x=st.layers[j].b[POS];if(pb(x).beh!=='trans'){const r=label2(x,j,d+1);return{m:r.m,s:'▽ '+st.layers[j].name,cls:'trans',w:''}}}return{m:'▽',s:'透過',cls:'trans',w:''}}return label(b,li,d)}
+
+const BEH=[['kp','キー（&kp）'],['mt','タップ:キー / 長押し:修飾（&mt）'],['lt','タップ:キー / 長押し:レイヤー（&lt）'],['mo','押している間レイヤー（&mo）'],['tog','レイヤーON/OFF（&tog）'],['to','レイヤーへ移動（&to）'],['sl','ワンショットレイヤー（&sl）'],['sk','ワンショット修飾（&sk）'],['bt','Bluetooth（&bt）'],['out','出力先 USB/BLE（&out）'],['sys','システム（ブート・リセット等）'],['custom','このファイルのカスタムbehavior'],['trans','透過（&trans）'],['none','無効（&none）'],['raw','その他（直接入力）']];
+function kind(beh){if(BEH.some(x=>x[0]===beh&&!['sys','custom','raw'].includes(x[0])))return beh;if(SYS[beh])return 'sys';if(CUST[beh])return 'custom';return 'raw'}
+const opt=(v,t,s)=>'<option value="'+esc(v)+'"'+(String(v)===String(s)?' selected':'')+'>'+esc(t)+'</option>';
+const layerSel=(id,v)=>'<label class="f" for="'+id+'">レイヤー</label><select id="'+id+'">'+st.layers.map((l,i)=>opt(i,i+': '+l.name,v)).join('')+'</select>';
+const holdSel=(id,v)=>'<label class="f" for="'+id+'">長押し時の修飾</label><select id="'+id+'">'+['LCTRL','LSHFT','LALT','LGUI','RCTRL','RSHFT','RALT','RGUI'].map(c=>opt(c,c+' ('+keyInfo(c,isMac(cur)).l+')',v)).join('')+'</select>';
+function tapInfo(code){const k=keyInfo(code,isMac(cur));return '<label class="f">タップ時のキー</label><div class="row" style="margin:0"><span class="pos" style="font-size:20px">'+esc(k.sh&&k.sh.endsWith('+')?k.sh+k.l:k.l)+'</span><span class="meta raw">'+esc(code)+'</span></div><p class="note" style="margin-top:2px">右のキーコード一覧から選択</p>'}
+function renderEditor(){
+  const b=st.layers[cur].b[sel];const {beh,args}=pb(b);const k=kind(beh);const p=posName(sel);
+  $('edPos').textContent=PNAME[sel];$('edIdx').textContent=p.side+'手 '+(p.r+1)+'段目 · #'+sel;
+  $('edBeh').innerHTML=BEH.map(x=>opt(x[0],x[1],k)).join('');
+  let h='';
+  if(k==='kp'){const u=unwrap(args[0]||'');h=tapInfo(args[0]||'')+'<label class="f">同時押しする修飾（LC() など）</label><div class="mods">'+MODS.map(m=>'<label><input type="checkbox" data-mod="'+m+'"'+(u.mods.includes(m)?' checked':'')+'>'+m+' '+modLbl(m,isMac(cur))+'</label>').join('')+'</div>'}
+  else if(k==='mt')h=holdSel('pHold',args[0])+tapInfo(args[1]||'');
+  else if(k==='lt')h=layerSel('pLayer',args[0])+tapInfo(args[1]||'');
+  else if(['mo','tog','to','sl'].includes(k))h=layerSel('pLayer',args[0]);
+  else if(k==='sk')h=holdSel('pHold',args[0]);
+  else if(k==='bt'){h='<label class="f" for="pBt">操作</label><select id="pBt">'+[['BT_SEL','プロファイル選択'],['BT_CLR','現在のプロファイルを消去'],['BT_CLR_ALL','全プロファイル消去'],['BT_NXT','次のプロファイル'],['BT_PRV','前のプロファイル'],['BT_DISC','切断']].map(x=>opt(x[0],x[1],args[0])).join('')+'</select>';if(['BT_SEL','BT_DISC'].includes(args[0]))h+='<label class="f" for="pBtN">プロファイル</label><select id="pBtN">'+[0,1,2,3,4].map(n=>opt(n,'BT'+(n+1)+'（'+n+'）',args[1])).join('')+'</select>'}
+  else if(k==='out')h='<label class="f" for="pOut">出力先</label><select id="pOut">'+[['OUT_TOG','USB/BLE 切替'],['OUT_USB','USB'],['OUT_BLE','BLE']].map(x=>opt(x[0],x[1],args[0])).join('')+'</select>';
+  else if(k==='sys')h='<label class="f" for="pSys">種類</label><select id="pSys">'+Object.keys(SYS).map(s=>opt(s,'&'+s+'（'+SYS[s]+'）',beh)).join('')+'</select><p class="note">&amp;soft_off等は別途Kconfig設定が必要な場合があります。</p>';
+  else if(k==='custom'){const ks=Object.keys(CUST);h='<label class="f" for="pCus">behavior</label><select id="pCus">'+ks.map(s=>opt(s,'&'+s+(CUST[s].bindings.length?'（'+CUST[s].bindings.join(' / ')+'）':''),beh)).join('')+'</select>'}
+  $('edParams').innerHTML=h;
+  const raw=$('edRaw');if(document.activeElement!==raw)raw.value=b;
+  const lb=labelAt(b,cur,sel);$('edWarn').textContent=lb.w||'';
+}
+function defaultFor(k,old){const {beh,args}=pb(old);let tap='A';if(beh==='kp')tap=args[0];else if(beh==='lt'||beh==='mt')tap=args[1];else if(beh==='sk')tap='LSHFT';
+  return {kp:'&kp '+tap,mt:'&mt LSHFT '+unwrap(tap).base,lt:'&lt 1 '+unwrap(tap).base,mo:'&mo 1',tog:'&tog 1',to:'&to 0',sl:'&sl 1',sk:'&sk LSHFT',bt:'&bt BT_SEL 0',out:'&out OUT_TOG',sys:'&bootloader',custom:'&'+(Object.keys(CUST)[0]||'trans'),trans:'&trans',none:'&none',raw:old}[k]}
+function fromParams(){
+  const {beh,args}=pb(st.layers[cur].b[sel]);const k=kind(beh);const v=id=>$(id)?$(id).value:'';
+  if(k==='kp'){const u=unwrap(args[0]||'A');const mods=[...document.querySelectorAll('[data-mod]')].filter(c=>c.checked).map(c=>c.dataset.mod);return '&kp '+wrap(mods,u.base)}
+  if(k==='mt')return '&mt '+v('pHold')+' '+args[1];
+  if(k==='lt')return '&lt '+v('pLayer')+' '+args[1];
+  if(['mo','tog','to','sl'].includes(k))return '&'+k+' '+v('pLayer');
+  if(k==='sk')return '&sk '+v('pHold');
+  if(k==='bt'){const a=v('pBt');return '&bt '+a+(['BT_SEL','BT_DISC'].includes(a)?' '+($('pBtN')?v('pBtN'):'0'):'')}
+  if(k==='out')return '&out '+v('pOut');
+  if(k==='sys')return '&'+v('pSys');
+  if(k==='custom')return '&'+v('pCus');
+  return st.layers[cur].b[sel];
+}
+function applyCode(code){
+  const b=st.layers[cur].b[sel];const {beh,args}=pb(b);const k=kind(beh);
+  if(k==='kp'){const u=unwrap(args[0]||'');const n=unwrap(code);setB('&kp '+wrap([...new Set([...u.mods,...n.mods])],n.base));}
+  else if(k==='lt')setB('&lt '+args[0]+' '+unwrap(code).base);
+  else if(k==='mt')setB('&mt '+args[0]+' '+unwrap(code).base);
+  else if(k==='sk')setB('&sk '+code);
+  else setB('&kp '+code);
+}
+function renderLayer(){const l=st.layers[cur];if(document.activeElement!==$('lyName'))$('lyName').value=l.name;if(document.activeElement!==$('lyNode'))$('lyNode').value=l.node;$('lyRes').checked=l.extra.some(e=>/status\s*=\s*"reserved"/.test(e));
+  const v=$('lySrc').value;$('lySrc').innerHTML=st.layers.map((x,i)=>i===cur?'':opt(i,'複製元: '+i+' '+x.name,v)).join('');}
+function renderPal(){
+  const q=$('pkQ').value.trim().toLowerCase();
+  $('cats').innerHTML=CATS.map(c=>'<button type="button" class="cat" data-c="'+esc(c)+'" aria-pressed="'+(!q&&c===cat)+'">'+esc(c)+'</button>').join('');
+  const list=DB.filter(d=>q?(d.c+' '+d.l+' '+d.sh+' '+d.al.join(' ')+' '+d.cat).toLowerCase().includes(q):d.cat===cat);
+  $('pal').innerHTML=list.length?list.map(d=>'<button type="button" class="pk'+(d.us&&usJis(d.c).warn?' w':'')+'" data-k="'+esc(d.c)+'" title="'+esc(d.c+(d.al.length?' / '+d.al.join(', '):''))+'"><b>'+esc(d.l)+(d.sh&&!d.us&&d.cat!=='修飾'&&d.sh!=='Num'?' <small style="font-weight:400;color:var(--mute)">'+esc(d.sh)+'</small>':'')+'</b><span>'+esc(d.c)+'</span></button>').join(''):'<p class="note">該当なし。直接入力欄に &amp;kp 名前 で入力できます。</p>';
+}
+function copyLayer(){
+  const src=+$('lySrc').value;if(isNaN(src))return;push();const dst=cur;const S=st.layers[src],D=st.layers[dst];
+  const fam=n=>{const m=/^(.*?)(\d+)$/.exec(n);return m?{p:m[1],n:m[2]}:null};const sf=fam(S.name),df=fam(D.name);
+  const map=r=>{if(!$('lyShift').checked||!sf||!df)return r;const t=st.layers[+r];const tf=t&&fam(t.name);if(!tf||tf.p!==sf.p)return r;const j=st.layers.findIndex(x=>x.name===df.p+tf.n);return j>=0?String(j):r};
+  D.b=S.b.map(b=>{const {beh,args}=pb(b);if(['mo','tog','to','sl','lt'].includes(beh)){args[0]=map(args[0]);return '&'+beh+' '+args.join(' ')}return b});
+  render();
+}
+
+/* ---- キャプチャ ---- */
+const EC={Minus:'MINUS',Equal:'EQUAL',IntlYen:'INT3',BracketLeft:'LBKT',BracketRight:'RBKT',Semicolon:'SEMI',Quote:'SQT',Backslash:'BSLH',IntlRo:'INT1',Comma:'COMMA',Period:'DOT',Slash:'FSLH',Backquote:'GRAVE',Enter:'RET',Escape:'ESC',Tab:'TAB',Space:'SPACE',Backspace:'BSPC',Delete:'DEL',Insert:'INS',CapsLock:'CAPS',ArrowUp:'UP',ArrowDown:'DOWN',ArrowLeft:'LEFT',ArrowRight:'RIGHT',Home:'HOME',End:'END',PageUp:'PG_UP',PageDown:'PG_DN',ControlLeft:'LCTRL',ControlRight:'RCTRL',ShiftLeft:'LSHFT',ShiftRight:'RSHFT',AltLeft:'LALT',AltRight:'RALT',MetaLeft:'LGUI',MetaRight:'RGUI',ContextMenu:'K_APP',PrintScreen:'PSCRN',ScrollLock:'SLCK',Pause:'PAUSE_BREAK',NumpadAdd:'KP_PLUS',NumpadSubtract:'KP_MINUS',NumpadMultiply:'KP_MULTIPLY',NumpadDivide:'KP_SLASH',NumpadDecimal:'KP_DOT',NumpadEnter:'KP_ENTER',NumpadEqual:'KP_EQUAL',NumLock:'KP_NUM',Lang1:'LANG1',Lang2:'LANG2',Convert:'INT4',NonConvert:'INT5',KanaMode:'INT2'};
+function codeOf(e){const c=e.code;let m;if((m=/^Key([A-Z])$/.exec(c)))return m[1];if((m=/^Digit(\d)$/.exec(c)))return 'N'+m[1];if((m=/^Numpad(\d)$/.exec(c)))return 'KP_N'+m[1];if(/^F\d+$/.test(c))return c;return EC[c]||null}
+const setCap=v=>{capture=v;$('pkCap').classList.toggle('on',v);$('pkCap').textContent=v?'キー入力待ち…（Escで中止）':'キーを押して指定'};
+
+/* ---- イベント ---- */
+$('tabs').addEventListener('click',e=>{const t=e.target.closest('.tab');if(!t)return;cur=+t.dataset.i;render()});
+$('board').addEventListener('click',e=>{const k=e.target.closest('.k');if(!k)return;sel=+k.dataset.i;render()});
+$('edBeh').addEventListener('change',e=>setB(defaultFor(e.target.value,st.layers[cur].b[sel])));
+$('edParams').addEventListener('change',()=>setB(fromParams()));
+$('edRaw').addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();setB(e.target.value);e.target.blur()}});
+$('edRaw').addEventListener('change',e=>setB(e.target.value));
+$('bTrans').onclick=()=>setB('&trans');$('bNone').onclick=()=>setB('&none');
+$('bCopy').onclick=()=>{clip=st.layers[cur].b[sel];$('bPaste').textContent='貼り付け（'+clip+'）'};
+$('bPaste').onclick=()=>{if(clip)setB(clip)};
+$('bRevert').onclick=()=>{if(base&&base[cur])setB(base[cur][sel])};
+const doUndo=()=>{const s=undo.pop();if(s){st.layers=JSON.parse(s);render()}};
+$('bUndo').onclick=doUndo;
+$('cats').addEventListener('click',e=>{const c=e.target.closest('.cat');if(!c)return;cat=c.dataset.c;$('pkQ').value='';renderPal()});
+$('pkQ').addEventListener('input',renderPal);
+$('pal').addEventListener('click',e=>{const k=e.target.closest('.pk');if(k)applyCode(k.dataset.k)});
+$('pkCap').onclick=()=>setCap(!capture);
+$('lyName').addEventListener('change',e=>{push();st.layers[cur].name=e.target.value.trim()||st.layers[cur].node;render()});
+$('lyNode').addEventListener('change',e=>{const v=e.target.value.trim().replace(/[^A-Za-z0-9_\-]/g,'_');if(!v)return;push();st.layers[cur].node=v;render()});
+$('lyRes').addEventListener('change',e=>{push();const l=st.layers[cur];l.extra=l.extra.filter(x=>!/status\s*=\s*"reserved"/.test(x));if(e.target.checked)l.extra.push('status = "reserved";');render()});
+$('lyCopy').onclick=copyLayer;
+$('lyClear').onclick=()=>{push();st.layers[cur].b=st.layers[cur].b.map(()=> '&trans');render()};
+$('exCopy').onclick=async()=>{const t=$('exTxt');try{await navigator.clipboard.writeText(t.value);$('exMsg').textContent='コピーしました'}catch(err){t.focus();t.select();$('exMsg').textContent='選択しました。Ctrl/⌘+C でコピーしてください'}};
+const doImport=t=>{try{const w=setSrc(t);$('imMsg').textContent='読み込みました（'+st.layers.length+'レイヤー）'+(w.length?' / 注意: '+w.join(', '):'');render()}catch(err){$('imMsg').textContent='読み込めませんでした: '+err.message}};
+$('imGo').onclick=()=>{if($('imTxt').value.trim())doImport($('imTxt').value)};
+$('imFile').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;f.text().then(doImport)});
+const RAW='https://raw.githubusercontent.com/OogamiZin/KeyBord.CLEAVE-HHJP-VerOGM/main/config/cleave_hhjp.keymap';
+const stockText=()=>$('stock').textContent.replace(/^\n/,'');
+async function latest(){try{const r=await fetch(RAW,{cache:'no-store'});if(!r.ok)throw 0;const t=await r.text();if(!/keymap\s*\{/.test(t))throw 0;return{t,from:'GitHub main（最新）'}}catch(e){return{t:stockText(),from:'埋め込み版'}}}
+$('imStock').onclick=async()=>{const r=await latest();doImport(r.t);$('imMsg').textContent+=' · '+r.from};
+document.addEventListener('keydown',e=>{
+  if(capture){e.preventDefault();if(e.code==='Escape'&&!e.ctrlKey){setCap(false);return}const c=codeOf(e);if(!c)return;
+    const modKey=/^(L|R)(CTRL|SHFT|ALT|GUI)$/.test(c);const mods=modKey?[]:[e.ctrlKey&&'LC',e.shiftKey&&'LS',e.altKey&&'LA',e.metaKey&&'LG'].filter(Boolean);
+    setCap(false);applyCode(wrap(mods,c));return}
+  const tg=e.target;if(tg.matches&&tg.matches('input,textarea,select'))return;
+  const mod=e.ctrlKey||e.metaKey;
+  if(mod&&e.key.toLowerCase()==='z'){e.preventDefault();doUndo()}
+  else if(mod&&e.key.toLowerCase()==='c'){if(window.getSelection().toString())return;$('bCopy').click()}
+  else if(mod&&e.key.toLowerCase()==='v'){if(clip){e.preventDefault();setB(clip)}}
+  else if(e.key==='ArrowRight'&&tg.closest&&tg.closest('.board')){e.preventDefault();sel=(sel+1)%70;render();document.querySelector('.k.sel').focus()}
+  else if(e.key==='ArrowLeft'&&tg.closest&&tg.closest('.board')){e.preventDefault();sel=(sel+69)%70;render();document.querySelector('.k.sel').focus()}
+  else if((e.key==='Delete'||e.key==='Backspace')&&tg.closest&&tg.closest('.board')){e.preventDefault();setB('&trans');document.querySelector('.k.sel').focus()}
+});
+let lastW=0;const ro=new ResizeObserver(en=>{const w=Math.round(en[0].contentRect.width);if(st&&w!==lastW){lastW=w;render()}});
+
+/* ---- 起動 ---- */
+if(load()){CUST=custom()}else{setSrc(stockText());latest().then(r=>{if(r.from!=='埋め込み版'&&!undo.length&&r.t!==st.src){setSrc(r.t);render()}})}
+renderPal();render();ro.observe($('board').parentElement);
+}
+</script>
+</body>
+</html>
