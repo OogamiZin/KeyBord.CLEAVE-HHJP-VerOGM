@@ -52,6 +52,11 @@ a{color:var(--brick)}
 .k.sel{outline:3px solid var(--ink);outline-offset:2px;z-index:2}
 .k.chg::after{content:"";position:absolute;right:4px;top:4px;width:7px;height:7px;border-radius:50%;background:var(--blue)}
 .k.warn::before{content:"!";position:absolute;right:3px;bottom:2px;font:700 12px/1 sans-serif;color:var(--brick)}
+.tip{position:fixed;z-index:50;max-width:min(340px,calc(100vw - 24px));background:var(--ink);color:var(--bg);border-radius:10px;padding:10px 12px;font-size:14px;line-height:1.5;pointer-events:none;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.tip b{display:block;font:700 15px/1.3 "Schibsted Grotesk","Noto Sans JP",sans-serif}
+.tip code{font:12px ui-monospace,Menlo,monospace;opacity:.75;display:block;margin-bottom:4px;overflow-wrap:anywhere}
+.tip .tw{color:light-dark(#ffb4a5,#a3260f);margin-top:4px}
+.desc{font-size:14px;margin-top:8px;padding:10px 12px;border-radius:8px;background:var(--bg)}
 .legend{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--mute);margin-top:12px}
 .legend i{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:-2px;margin-right:5px;border:1px solid var(--capedge);background:var(--cap)}
 .cols{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,7fr);gap:16px;margin-top:16px}
@@ -117,6 +122,7 @@ button.on{background:var(--brick);color:#fff;border-color:var(--brick)}
       <div id="edParams"></div>
       <label class="f" for="edRaw">バインディング（直接編集可・Enterで確定）</label>
       <input type="text" id="edRaw" class="raw" spellcheck="false" autocomplete="off">
+      <div id="edDesc" class="desc hide"></div>
       <div id="edWarn" class="warnbox"></div>
       <div class="row" style="margin-top:12px">
         <button class="b" id="bTrans" type="button">透過にする</button>
@@ -190,6 +196,7 @@ button.on{background:var(--brick);color:#fff;border-color:var(--brick)}
   </div>
 </div></div>
 
+<div id="tip" class="tip hide" role="tooltip"></div>
 <script type="text/plain" id="stock">
 /*
  * Copyright (c) 2025
@@ -384,7 +391,7 @@ function keyInfo(code,mac){
 }
 const lname=n=>{const i=+n;return st.layers[i]?st.layers[i].name:'L'+n+'?'};
 const badL=n=>!st.layers[+n]?'存在しないレイヤー番号: '+n:'';
-function custom(){const out={};const t=st.src.slice(0,st.ks);const re=/(\w+)\s*:\s*[\w\-]+\s*\{([^{}]*)\}/g;let m;while((m=re.exec(t))){const body=m[2];const cells=/#binding-cells\s*=\s*<(\d)>/.exec(body);if(!cells||cells[1]!=='0')continue;const bs=[...body.matchAll(/<\s*(&[^>]+?)\s*>/g)].map(x=>x[1]);out[m[1]]={bindings:/mod-morph/.test(body)?bs.filter(x=>x.startsWith('&')):[]}}return out}
+function custom(){const out={};const t=st.src.slice(0,st.ks);const re=/(\w+)\s*:\s*[\w\-]+\s*\{([^{}]*)\}/g;let m;while((m=re.exec(t))){const body=m[2];const cells=/#binding-cells\s*=\s*<(\d)>/.exec(body);if(!cells||cells[1]!=='0')continue;const bs=[...body.matchAll(/<\s*(&[^>]+?)\s*>/g)].map(x=>x[1]);const md=/mods\s*=\s*<([^>]*)>/.exec(body);out[m[1]]={bindings:/mod-morph/.test(body)?bs.filter(x=>x.startsWith('&')):[],mods:md?md[1]:'',comp:(/compatible\s*=\s*"([^"]+)"/.exec(body)||[])[1]||''}}return out}
 let CUST={};
 const SYS={bootloader:'ブート',sys_reset:'リセット',studio_unlock:'Studio解錠',caps_word:'CapsWord',key_repeat:'リピート',soft_off:'電源OFF'};
 function label(bind,li,depth){
@@ -408,6 +415,45 @@ function label(bind,li,depth){
       if(CUST[beh]){const c=CUST[beh];if(c.bindings.length>=2){const a=label(c.bindings[0],li,9),b=label(c.bindings[1],li,9);return L(a.m,'Ctrl: '+b.m,'sys',a.w)}return L(beh,'カスタム','sys')}
       return L(beh?('&'+beh):'?','未対応','','解析できないバインディング');
   }
+}
+
+/* ---- 特殊キーの説明 ---- */
+const KDESC={C_PWR:'OSに電源キーを送ります。押した時の動作（スリープ・シャットダウン等）はOS側の設定で決まります',C_EJECT:'取り出しキー。主にmacOSで有効です',C_VOL_UP:'音量を上げます',C_VOL_DN:'音量を下げます',C_MUTE:'消音を切り替えます',C_PP:'再生/一時停止',C_NEXT:'次の曲',C_PREV:'前の曲',C_STOP:'再生停止',C_BRI_UP:'画面の明るさを上げます（主にmacOS）',C_BRI_DN:'画面の明るさを下げます（主にmacOS）',
+LANG1:'JIS配列の「かな」キー（LANG1）。macOSでかな入力、WindowsではIMEオンとして扱われる場合があります',LANG2:'JIS配列の「英数」キー（LANG2）。macOSで英数入力、WindowsではIMEオフとして扱われる場合があります',GRAVE:'JIS配列では「半角/全角」キー。WindowsでIMEのオン/オフを切り替えます',INT4:'「変換」キー（INT4）',INT5:'「無変換」キー（INT5）',INT2:'「カタカナ/ひらがな」キー（INT2）',INT1:'JIS配列の「\\ _（ろ）」キー（INT1）',INT3:'JIS配列の「¥ |」キー（INT3）',
+PSCRN:'Print Screen',SLCK:'Scroll Lock',PAUSE_BREAK:'Pause/Break',CAPS:'Caps Lock。JISのWindowsでは Shift+CapsLock で英大文字固定になります',K_APP:'アプリケーション（右クリックメニュー）キー',KP_NUM:'Num Lock。OS側のテンキー入力の有効/無効に影響します'};
+const MODJ={MOD_LCTL:'左Ctrl',MOD_RCTL:'右Ctrl',MOD_LSFT:'左Shift',MOD_RSFT:'右Shift',MOD_LALT:'左Alt',MOD_RALT:'右Alt',MOD_LGUI:'左Win/⌘',MOD_RGUI:'右Win/⌘'};
+const keyTxt=(c,li)=>{const k=keyInfo(c,isMac(li));return (k.sh&&k.sh.endsWith('+')?k.sh:'')+k.l};
+function describe(b,li,pos){
+  const {beh,args}=pb(b);const ln=n=>'「'+lname(n)+'」（'+n+'）';
+  switch(beh){
+    case 'bt':{const n=args[1]!=null?(+args[1]+1):'';return{
+      BT_SEL:['Bluetooth プロファイル '+n,'プロファイル'+n+'に切り替えます。未ペアリングの番号を選ぶとペアリング待ち（アドバタイズ）になります。'],
+      BT_CLR:['現在のBTプロファイルを消去','今選択しているプロファイルのペアリング情報を消します。ホスト側の登録も削除してから再ペアリングしてください。'],
+      BT_CLR_ALL:['全BTプロファイルを消去','すべてのプロファイルのペアリング情報を消します。'],
+      BT_NXT:['次のBTプロファイル','次の番号のプロファイルへ切り替えます。'],BT_PRV:['前のBTプロファイル','前の番号のプロファイルへ切り替えます。'],
+      BT_DISC:['BTプロファイル '+n+' を切断','プロファイル'+n+'の接続を切ります。選択中のプロファイルは変わりません。']}[args[0]]||['Bluetooth',args.join(' ')]}
+    case 'out':return({OUT_USB:['出力先: USB','USBで接続しているホストへキー入力を送ります。'],OUT_BLE:['出力先: Bluetooth','Bluetoothで接続しているホストへキー入力を送ります。'],OUT_TOG:['出力先 USB⇄BLE 切替','USBとBluetoothの出力先を切り替えます。USB接続中でもBT側へ入力したいときに使います。']})[args[0]]||['出力先',args.join(' ')];
+    case 'bootloader':return['ブートローダー','UF2書き込みモードで再起動します（PCにドライブとして見えます）。分割キーボードでは押したキーがある側（左右）で動作します。'];
+    case 'sys_reset':return['リセット','キーボードを再起動します。押したキーがある側（左右）で動作します。'];
+    case 'studio_unlock':return['ZMK Studio ロック解除','ZMK Studioで設定を変更する前に押す必要があるキーです。'];
+    case 'caps_word':return['Caps Word','次の単語だけ大文字で入力します。スペースや記号を押すと解除されます。'];
+    case 'key_repeat':return['キーリピート','直前に送ったキーをもう一度送ります。'];
+    case 'soft_off':return['ソフト電源OFF','電源を切った状態にします。復帰には設定したキーやリセットが必要です（Kconfig設定が必要）。'];
+    case 'mo':return['レイヤー '+lname(args[0])+'（押下中）','押している間だけ'+ln(args[0])+'レイヤーを有効にします。'];
+    case 'tog':return['レイヤー '+lname(args[0])+'（ON/OFF）','押すたびに'+ln(args[0])+'レイヤーの有効・無効を切り替えます。'];
+    case 'to':return['レイヤー '+lname(args[0])+' へ移動',ln(args[0])+'を有効にし、0番以外の他のレイヤーを無効にします。ベースレイヤーの切り替えに使います。'];
+    case 'sl':return['ワンショットレイヤー',ln(args[0])+'を次に押す1キーの間だけ有効にします。'];
+    case 'lt':return['レイヤータップ','タップで「'+keyTxt(args[1],li)+'」、長押し中は'+ln(args[0])+'レイヤーになります。'];
+    case 'mt':return['モッドタップ','タップで「'+keyTxt(args[1],li)+'」、長押し中は '+keyTxt(args[0],li)+' として働きます。'];
+    case 'sk':return['ワンショット修飾',keyTxt(args[0],li)+' を次に押す1キーにだけ付けます。'];
+    case 'trans':{for(let j=li-1;j>=0;j--){const x=st.layers[j].b[pos];if(pb(x).beh!=='trans'){POS=pos;return['透過','このレイヤーでは何もせず、下のレイヤー「'+st.layers[j].name+'」の割り当て（'+x+'）を使います。']}}return['透過','下のレイヤーの割り当てを使います。']}
+    case 'none':return['無効','何もしません。下のレイヤーへも透過しません。'];
+    case 'kp':{const u=unwrap(args[0]||'');const d=KDESC[u.base];if(d)return[keyTxt(args[0],li),d];if(u.mods.length)return['同時押し',keyTxt(args[0],li)+' を1キーで送ります。'];return null}
+  }
+  const c=CUST[beh];if(c){
+    if(c.bindings.length>=2){const mods=(c.mods.match(/MOD_\w+/g)||[]).map(x=>MODJ[x]||x).join(' または ');const d0=describe(c.bindings[0],li,pos),d1=describe(c.bindings[1],li,pos);const t0=d0?d0[0]:label(c.bindings[0],li,9).m,t1=d1?d1[0]:label(c.bindings[1],li,9).m;return[t0+'（'+(mods?mods.replace(/左|右/g,'').split(' または ')[0]:'修飾')+'押しで '+t1+'）','通常は「'+t0+'」、'+(mods||'指定の修飾キー')+' を押しながらだと「'+t1+'」になります。'+(d1?d1[1]:'')]}
+    return['&'+beh,'このファイルで定義されたカスタムbehavior'+(c.comp?'（'+c.comp+'）':'')+'です。']}
+  return null;
 }
 
 /* ---- 解析 ---- */
@@ -466,7 +512,7 @@ function render(){
   B.style.width=16.5*U+'px';B.style.height=5*U+6+'px';B.style.setProperty('--u',U+'px');
   let html='';
   PHYS.forEach((p,i)=>{const b=st.layers[realCur].b[i];const lb=labelAt(b,realCur,i);const chg=base&&base[realCur]&&base[realCur][i]!==b;
-    html+='<button type="button" class="k '+lb.cls+(i===sel?' sel':'')+(chg?' chg':'')+(lb.w?' warn':'')+'" data-i="'+i+'" style="left:'+(p[2]/100*U)+'px;top:'+(p[3]/100*U)+'px;width:'+(p[0]/100*U-5)+'px;height:'+(p[1]/100*U-5)+'px" title="'+esc(PNAME[i]+' : '+b+(lb.w?' / '+lb.w:''))+'"><span class="s">'+esc(lb.s||' ')+'</span><span class="m'+(String(lb.m).length>5?' long':'')+'">'+esc(lb.m)+'</span></button>'});
+    html+='<button type="button" class="k '+lb.cls+(i===sel?' sel':'')+(chg?' chg':'')+(lb.w?' warn':'')+'" data-i="'+i+'" style="left:'+(p[2]/100*U)+'px;top:'+(p[3]/100*U)+'px;width:'+(p[0]/100*U-5)+'px;height:'+(p[1]/100*U-5)+'px" aria-label="'+esc(PNAME[i]+' '+b)+'"><span class="s">'+esc(lb.s||' ')+'</span><span class="m'+(String(lb.m).length>5?' long':'')+'">'+esc(lb.m)+'</span></button>'});
   B.innerHTML=html;
   let chg=0,wn=0;st.layers.forEach((l,li)=>l.b.forEach((b,i)=>{if(base&&base[li]&&base[li][i]!==b)chg++;if(labelAt(b,li,i).w)wn++}));
   $('stLayers').textContent=st.layers.length;$('stChg').textContent=chg;$('stWarn').textContent=wn;
@@ -498,7 +544,7 @@ function renderEditor(){
   else if(k==='custom'){const ks=Object.keys(CUST);h='<label class="f" for="pCus">behavior</label><select id="pCus">'+ks.map(s=>opt(s,'&'+s+(CUST[s].bindings.length?'（'+CUST[s].bindings.join(' / ')+'）':''),beh)).join('')+'</select>'}
   $('edParams').innerHTML=h;
   const raw=$('edRaw');if(document.activeElement!==raw)raw.value=b;
-  const lb=labelAt(b,cur,sel);$('edWarn').textContent=lb.w||'';
+  const lb=labelAt(b,cur,sel);$('edWarn').textContent=lb.w||'';const ds=describe(b,cur,sel);$('edDesc').classList.toggle('hide',!ds);$('edDesc').textContent=ds?ds[0]+'：'+ds[1]:'';
 }
 function defaultFor(k,old){const {beh,args}=pb(old);let tap='A';if(beh==='kp')tap=args[0];else if(beh==='lt'||beh==='mt')tap=args[1];else if(beh==='sk')tap='LSHFT';
   return {kp:'&kp '+tap,mt:'&mt LSHFT '+unwrap(tap).base,lt:'&lt 1 '+unwrap(tap).base,mo:'&mo 1',tog:'&tog 1',to:'&to 0',sl:'&sl 1',sk:'&sk LSHFT',bt:'&bt BT_SEL 0',out:'&out OUT_TOG',sys:'&bootloader',custom:'&'+(Object.keys(CUST)[0]||'trans'),trans:'&trans',none:'&none',raw:old}[k]}
@@ -602,6 +648,21 @@ document.addEventListener('keydown',e=>{
   else if((e.key==='Delete'||e.key==='Backspace')&&tg.closest&&tg.closest('.board')){e.preventDefault();setB('&trans');document.querySelector('.k.sel').focus()}
 });
 let lastW=0;const ro=new ResizeObserver(en=>{const w=Math.round(en[0].contentRect.width);if(st&&w!==lastW){lastW=w;render()}});
+
+/* ---- ツールチップ ---- */
+const tip=$('tip');
+function showTip(el){const i=+el.dataset.i;const b=st.layers[cur].b[i];const ds=pb(b).beh==='trans'?null:describe(b,cur,i);const w=labelAt(b,cur,i).w;if(!ds&&!w){hideTip();return}
+  tip.textContent='';const h=document.createElement('b');h.textContent=ds?ds[0]:PNAME[i];const c=document.createElement('code');c.textContent=PNAME[i]+' · '+b;tip.append(h,c);
+  if(ds){const p=document.createElement('div');p.textContent=ds[1];tip.append(p)}if(w){const p=document.createElement('div');p.className='tw';p.textContent='注意: '+w;tip.append(p)}
+  tip.classList.remove('hide');const r=el.getBoundingClientRect(),tr=tip.getBoundingClientRect();
+  let x=r.left+r.width/2-tr.width/2;x=Math.max(12,Math.min(x,innerWidth-tr.width-12));let y=r.top-tr.height-8;if(y<8)y=r.bottom+8;tip.style.left=x+'px';tip.style.top=y+'px'}
+const hideTip=()=>tip.classList.add('hide');
+$('board').addEventListener('mouseover',e=>{const k=e.target.closest('.k');if(k)showTip(k)});
+$('board').addEventListener('mouseleave',hideTip);
+$('board').addEventListener('focusin',e=>{const k=e.target.closest('.k');if(k)showTip(k)});
+$('board').addEventListener('focusout',hideTip);
+$('board').parentElement.addEventListener('scroll',hideTip);
+addEventListener('scroll',hideTip,{passive:true});
 
 /* ---- 起動 ---- */
 if(load()){CUST=custom()}else{setSrc(stockText());latest().then(r=>{if(r.from!=='埋め込み版'&&!undo.length&&r.t!==st.src){setSrc(r.t);render()}})}
