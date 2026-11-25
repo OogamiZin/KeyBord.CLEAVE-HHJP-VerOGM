@@ -63,6 +63,7 @@ textarea{font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;min-height:260px;w
 select:focus,input:focus,textarea:focus,button:focus-visible{outline:2px solid var(--blue);outline-offset:1px}
 button.b{font:500 15px "Noto Sans JP",sans-serif;min-height:44px;padding:8px 14px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer}
 button.b:hover{border-color:var(--ink)}
+button.b:disabled{opacity:.4;cursor:default}
 button.p{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 button.on{background:var(--brick);color:#fff;border-color:var(--brick)}
 .pos{font:700 26px/1.1 "Schibsted Grotesk","Noto Sans JP",sans-serif}
@@ -143,7 +144,7 @@ button.on{background:var(--brick);color:#fff;border-color:var(--brick)}
   <section class="panel" style="margin-top:16px" aria-labelledby="lyH">
     <h2 id="lyH">レイヤー設定</h2>
     <div class="row">
-      <div style="flex:1 1 220px"><label class="f" for="lyName">表示名（display-name）</label><input type="text" id="lyName"></div>
+      <div style="flex:1 1 220px"><label class="f" for="lyName">表示名（display-name）</label><input type="text" id="lyName" maxlength="40"></div>
       <div style="flex:1 1 220px"><label class="f" for="lyNode">ノード名</label><input type="text" id="lyNode" class="raw"></div>
       <label style="display:flex;gap:8px;align-items:center;min-height:44px;margin-top:26px"><input type="checkbox" id="lyRes" style="width:18px;height:18px">status = "reserved"</label>
     </div>
@@ -153,7 +154,15 @@ button.on{background:var(--brick);color:#fff;border-color:var(--brick)}
       <button class="b" id="lyCopy" type="button">このレイヤーへ複製</button>
       <button class="b" id="lyClear" type="button">全キーを透過に</button>
     </div>
-    <p class="note">reserved はZMK Studioで後から有効化する予約レイヤーの指定です。Mac系レイヤーへ割り当てを入れる場合は、使い方に合わせて外してください。</p>
+    <div class="row">
+      <button class="b" id="lyAdd" type="button">右に空レイヤーを追加</button>
+      <button class="b" id="lyDup" type="button">このレイヤーを複製して追加</button>
+      <button class="b" id="lyLeft" type="button">← 前へ移動</button>
+      <button class="b" id="lyRight" type="button">後ろへ移動 →</button>
+      <button class="b" id="lyDel" type="button">このレイヤーを削除</button>
+      <span id="lyMsg" class="meta"></span>
+    </div>
+    <p class="note">reserved はZMK Studioで後から有効化する予約レイヤーの指定です。Mac系レイヤーへ割り当てを入れる場合は、使い方に合わせて外してください。追加・削除・移動の際は、keymap内の &amp;mo / &amp;lt / &amp;tog / &amp;to / &amp;sl のレイヤー番号を自動で付け替えます（削除したレイヤーを指すキーは &amp;none になります）。behaviorsブロック内のマクロ等で使っているレイヤー番号は付け替えないので、手動で確認してください。</p>
   </section>
 
   <div class="out">
@@ -373,7 +382,8 @@ function keyInfo(code,mac){
   if(mods.length){sh=mods.map(m=>modLbl(m,mac)).join('+')+'+';}
   return{l,sh,warn,isMod};
 }
-const lname=n=>{const i=+n;return st.layers[i]?st.layers[i].name:'L'+n};
+const lname=n=>{const i=+n;return st.layers[i]?st.layers[i].name:'L'+n+'?'};
+const badL=n=>!st.layers[+n]?'存在しないレイヤー番号: '+n:'';
 function custom(){const out={};const t=st.src.slice(0,st.ks);const re=/(\w+)\s*:\s*[\w\-]+\s*\{([^{}]*)\}/g;let m;while((m=re.exec(t))){const body=m[2];const cells=/#binding-cells\s*=\s*<(\d)>/.exec(body);if(!cells||cells[1]!=='0')continue;const bs=[...body.matchAll(/<\s*(&[^>]+?)\s*>/g)].map(x=>x[1]);out[m[1]]={bindings:/mod-morph/.test(body)?bs.filter(x=>x.startsWith('&')):[]}}return out}
 let CUST={};
 const SYS={bootloader:'ブート',sys_reset:'リセット',studio_unlock:'Studio解錠',caps_word:'CapsWord',key_repeat:'リピート',soft_off:'電源OFF'};
@@ -382,11 +392,11 @@ function label(bind,li,depth){
   const L=(m,s,cls,w)=>({m,s,cls,w:w||''});
   switch(beh){
     case 'kp':{const k=keyInfo(args[0],mac);return L(k.l,k.sh,k.isMod&&!unwrap(args[0]).mods.length?'mod':'',k.warn)}
-    case 'mo':return L(lname(args[0]),'押下中','layer');
-    case 'tog':return L(lname(args[0]),'切替','layer');
-    case 'to':return L(lname(args[0]),'移動','layer');
-    case 'sl':return L(lname(args[0]),'1回','layer');
-    case 'lt':{const k=keyInfo(args[1],mac);return L(k.l,'長押し '+lname(args[0]),'layer',k.warn)}
+    case 'mo':return L(lname(args[0]),'押下中','layer',badL(args[0]));
+    case 'tog':return L(lname(args[0]),'切替','layer',badL(args[0]));
+    case 'to':return L(lname(args[0]),'移動','layer',badL(args[0]));
+    case 'sl':return L(lname(args[0]),'1回','layer',badL(args[0]));
+    case 'lt':{const k=keyInfo(args[1],mac);return L(k.l,'長押し '+lname(args[0]),'layer',badL(args[0])||k.warn)}
     case 'mt':{const k=keyInfo(args[1],mac),h=keyInfo(args[0],mac);return L(k.l,'長押し '+h.l,'mod',k.warn)}
     case 'sk':{const k=keyInfo(args[0],mac);return L(k.l,'1回','mod',k.warn)}
     case 'trans':return label2(bind,li,(depth||0)+1);
@@ -443,7 +453,7 @@ const KEY='cleave-hhjp-zmk-editor-v1';
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify({st,base,cur,sel}))}catch(e){}};
 function load(){try{const j=JSON.parse(localStorage.getItem(KEY)||'null');if(j&&j.st&&j.st.layers){st=j.st;base=j.base;cur=j.cur||0;sel=j.sel||0;return true}}catch(e){}return false}
 function setSrc(text){const p=parse(text);st={src:p.src,ks:p.ks,ke:p.ke,layers:p.layers};base=p.layers.map(l=>l.b.slice());cur=0;sel=0;undo=[];CUST=custom();return p.warns}
-const push=()=>{undo.push(JSON.stringify(st.layers));if(undo.length>200)undo.shift()};
+const push=()=>{undo.push(JSON.stringify({l:st.layers,b:base,c:cur}));if(undo.length>200)undo.shift()};
 function setB(s){s=s.trim().replace(/\s+/g,' ');if(!s.startsWith('&'))s='&'+s;if(st.layers[cur].b[sel]===s)return;push();st.layers[cur].b[sel]=s;render()}
 
 /* ---- 描画 ---- */
@@ -513,7 +523,7 @@ function applyCode(code){
   else if(k==='sk')setB('&sk '+code);
   else setB('&kp '+code);
 }
-function renderLayer(){const l=st.layers[cur];if(document.activeElement!==$('lyName'))$('lyName').value=l.name;if(document.activeElement!==$('lyNode'))$('lyNode').value=l.node;$('lyRes').checked=l.extra.some(e=>/status\s*=\s*"reserved"/.test(e));
+function renderLayer(){const l=st.layers[cur];if(delArm!==cur){delArm=null;$('lyDel').textContent='このレイヤーを削除';$('lyDel').classList.remove('on')}$('lyLeft').disabled=cur===0;$('lyRight').disabled=cur===st.layers.length-1;if(document.activeElement!==$('lyName'))$('lyName').value=l.name;if(document.activeElement!==$('lyNode'))$('lyNode').value=l.node;$('lyRes').checked=l.extra.some(e=>/status\s*=\s*"reserved"/.test(e));
   const v=$('lySrc').value;$('lySrc').innerHTML=st.layers.map((x,i)=>i===cur?'':opt(i,'複製元: '+i+' '+x.name,v)).join('');}
 function renderPal(){
   const q=$('pkQ').value.trim().toLowerCase();
@@ -545,16 +555,30 @@ $('bTrans').onclick=()=>setB('&trans');$('bNone').onclick=()=>setB('&none');
 $('bCopy').onclick=()=>{clip=st.layers[cur].b[sel];$('bPaste').textContent='貼り付け（'+clip+'）'};
 $('bPaste').onclick=()=>{if(clip)setB(clip)};
 $('bRevert').onclick=()=>{if(base&&base[cur])setB(base[cur][sel])};
-const doUndo=()=>{const s=undo.pop();if(s){st.layers=JSON.parse(s);render()}};
+const doUndo=()=>{const s=undo.pop();if(s){const j=JSON.parse(s);st.layers=j.l;base=j.b;cur=Math.min(j.c,st.layers.length-1);render()}};
 $('bUndo').onclick=doUndo;
 $('cats').addEventListener('click',e=>{const c=e.target.closest('.cat');if(!c)return;cat=c.dataset.c;$('pkQ').value='';renderPal()});
 $('pkQ').addEventListener('input',renderPal);
 $('pal').addEventListener('click',e=>{const k=e.target.closest('.pk');if(k)applyCode(k.dataset.k)});
 $('pkCap').onclick=()=>setCap(!capture);
-$('lyName').addEventListener('change',e=>{push();st.layers[cur].name=e.target.value.trim()||st.layers[cur].node;render()});
-$('lyNode').addEventListener('change',e=>{const v=e.target.value.trim().replace(/[^A-Za-z0-9_\-]/g,'_');if(!v)return;push();st.layers[cur].node=v;render()});
+$('lyName').addEventListener('change',e=>{push();const v=e.target.value.trim().replace(/"/g,'');st.layers[cur].name=(v||st.layers[cur].node).slice(0,20);lmsg(v.length>20?'表示名は20文字までに切り詰めました（ZMK既定の上限）':'');render()});
+$('lyNode').addEventListener('change',e=>{const v=e.target.value.trim();if(!v)return;const u=uniq(v,cur);push();st.layers[cur].node=u;lmsg(u!==v?'ノード名を '+u+' にしました（重複・使用不可文字のため）':'');render()});
 $('lyRes').addEventListener('change',e=>{push();const l=st.layers[cur];l.extra=l.extra.filter(x=>!/status\s*=\s*"reserved"/.test(x));if(e.target.checked)l.extra.push('status = "reserved";');render()});
 $('lyCopy').onclick=copyLayer;
+const LREF=['mo','tog','to','sl','lt'];
+function remap(fn){st.layers.forEach(l=>{l.b=l.b.map(b=>{const {beh,args}=pb(b);if(!LREF.includes(beh)||!/^\d+$/.test(args[0]||''))return b;const n=fn(+args[0]);if(n===null)return '&none';args[0]=String(n);return '&'+beh+' '+args.join(' ')})})}
+function uniq(node,skip){let n=node.replace(/[^A-Za-z0-9_\-]/g,'_')||'layer',k=n,i=2;while(st.layers.some((l,j)=>j!==skip&&l.node===k))k=n+'_'+(i++);return k}
+const lmsg=s=>{$('lyMsg').textContent=s};
+function insertLayer(at,layer){push();remap(n=>n>=at?n+1:n);st.layers.splice(at,0,layer);base.splice(at,0,null);cur=at;lmsg('「'+layer.name+'」を '+at+' 番に追加しました');render()}
+$('lyAdd').onclick=()=>{const n=st.layers.length;insertLayer(cur+1,{node:uniq('layer_'+n),name:'Layer'+n,extra:[],b:Array(70).fill('&trans')})};
+$('lyDup').onclick=()=>{const s=st.layers[cur];insertLayer(cur+1,{node:uniq(s.node+'_copy'),name:(s.name+'_2').slice(0,20),extra:s.extra.slice(),b:s.b.slice()})};
+function moveLayer(d){const a=cur,b=cur+d;if(b<0||b>=st.layers.length)return;push();remap(n=>n===a?b:n===b?a:n);[st.layers[a],st.layers[b]]=[st.layers[b],st.layers[a]];[base[a],base[b]]=[base[b],base[a]];cur=b;lmsg(b===0?'0番（デフォルトレイヤー）になりました':'');render()}
+$('lyLeft').onclick=()=>moveLayer(-1);$('lyRight').onclick=()=>moveLayer(1);
+let delArm=null;
+$('lyDel').onclick=()=>{if(st.layers.length<=1){lmsg('最後の1レイヤーは削除できません');return}
+  if(delArm!==cur){delArm=cur;$('lyDel').textContent='もう一度押すと「'+st.layers[cur].name+'」を削除';$('lyDel').classList.add('on');return}
+  const d=cur,nm=st.layers[d].name;push();let hit=0;remap(n=>{if(n===d){hit++;return null}return n>d?n-1:n});st.layers.splice(d,1);base.splice(d,1);cur=Math.max(0,Math.min(d,st.layers.length-1));delArm=null;
+  lmsg('「'+nm+'」を削除しました'+(hit?'（参照していた '+hit+' キーを &none に）':''));render()};
 $('lyClear').onclick=()=>{push();st.layers[cur].b=st.layers[cur].b.map(()=> '&trans');render()};
 $('exCopy').onclick=async()=>{const t=$('exTxt');try{await navigator.clipboard.writeText(t.value);$('exMsg').textContent='コピーしました'}catch(err){t.focus();t.select();$('exMsg').textContent='選択しました。Ctrl/⌘+C でコピーしてください'}};
 const doImport=t=>{try{const w=setSrc(t);$('imMsg').textContent='読み込みました（'+st.layers.length+'レイヤー）'+(w.length?' / 注意: '+w.join(', '):'');render()}catch(err){$('imMsg').textContent='読み込めませんでした: '+err.message}};
