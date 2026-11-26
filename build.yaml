@@ -11,12 +11,11 @@ include:
   - board: seeeduino_xiao_ble
     shield: settings_reset
 
-  # --- BTプロファイル確認用（左手のみ・USBログ出力、ZMK Studioは無効）---
-  # 中身の確認が終わったら通常の cleave_hhjp_left を書き戻す
+  # --- BTプロファイル確認・管理用（左手のみ）---
+  # ZMK Studio用とUSBログ（BT管理）用の2つのシリアルポートを持つ
   - board: seeeduino_xiao_ble
     shield: cleave_hhjp_left rgbled_adapter
-    snippet: zmk-usb-logging
-    cmake-args: -DCONFIG_ZMK_STUDIO=n -DCONFIG_CLEAVE_BT_PROFILE_DUMP=y -DCONFIG_CLEAVE_BT_PROFILE_CONTROL=y
+    cmake-args: -DSNIPPET="studio-rpc-usb-uart;zmk-usb-logging" -DCONFIG_CLEAVE_BT_PROFILE_DUMP=y -DCONFIG_CLEAVE_BT_PROFILE_CONTROL=y
     artifact-name: cleave_hhjp_left-btinfo
 
   # --- SoftDevice なし（nosd）版 ---
