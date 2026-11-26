@@ -7,11 +7,19 @@ on:
       - 'config/**'
       - 'build.yaml'
       - '.github/workflows/build-firmware.yml'
+      - 'src/**'
+      - 'Kconfig'
+      - 'CMakeLists.txt'
+      - 'zephyr/**'
   pull_request:
     paths:
       - 'config/**'
       - 'build.yaml'
       - '.github/workflows/build-firmware.yml'
+      - 'src/**'
+      - 'Kconfig'
+      - 'CMakeLists.txt'
+      - 'zephyr/**'
 
 jobs:
   build:

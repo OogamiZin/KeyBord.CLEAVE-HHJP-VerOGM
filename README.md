@@ -18,6 +18,8 @@
   組み立て、ファームウェア書き込み、ケース作成、完成後の使い方、カスタマイズ方法をまとめています。
 - [キーマップ編集ツール](tools/keymap-editor/README.md)
   ブラウザ上で`config/cleave_hhjp.keymap`の初期キーマップを編集し、全文を出力します。
+- [BTプロファイル確認ツール](tools/bt-profiles/index.html)
+  確認用ファームウェア`cleave_hhjp_left-btinfo`を書き込んだ左手からBluetoothプロファイルの登録状況を読み取ります（Chrome / Edge）。
   https://oogamizin.github.io/KeyBord.CLEAVE-HHJP-VerOGM/tools/keymap-editor/
 
 ## 関連リンク

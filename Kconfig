@@ -1,0 +1,15 @@
+# Copyright (c) 2025
+# SPDX-License-Identifier: MIT
+
+config CLEAVE_BT_PROFILE_DUMP
+    bool "Print Bluetooth profile / bond info to the console"
+    depends on ZMK_BLE
+    help
+      Prints the BT profile slots, bonded peers and the keyboard's own
+      address to the console (use with the zmk-usb-logging snippet).
+      Lines start with "BTPROF|" so tools/bt-profiles can parse them.
+
+config CLEAVE_BT_PROFILE_DUMP_INTERVAL_SEC
+    int "Interval between dumps in seconds"
+    default 10
+    depends on CLEAVE_BT_PROFILE_DUMP

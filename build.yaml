@@ -11,6 +11,14 @@ include:
   - board: seeeduino_xiao_ble
     shield: settings_reset
 
+  # --- BTプロファイル確認用（左手のみ・USBログ出力、ZMK Studioは無効）---
+  # 中身の確認が終わったら通常の cleave_hhjp_left を書き戻す
+  - board: seeeduino_xiao_ble
+    shield: cleave_hhjp_left rgbled_adapter
+    snippet: zmk-usb-logging
+    cmake-args: -DCONFIG_ZMK_STUDIO=n -DCONFIG_CLEAVE_BT_PROFILE_DUMP=y
+    artifact-name: cleave_hhjp_left-btinfo
+
   # --- SoftDevice なし（nosd）版 ---
   # RMK を一度書き込んだ XIAO に ZMK を戻すときはこちらを使う
   - board: seeeduino_xiao_ble

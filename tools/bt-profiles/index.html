@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLEAVE HHJP BTプロファイル確認</title>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@500;700&family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE work: 診断ツール、事実だけを静かに
+   IDEA 機器の銘板／接続台帳。5つのスロットが並ぶ
+   PICTURE プロファイル5枠のスロット表（選択中・接続中・登録済・空き）
+   COLOUR stone地、白パネル、brickで選択中、blueで接続中
+   TYPE Schibsted Grotesk + Noto Sans JP
+   LAYOUT 上に接続ボタンと状態、スロット表、下にプロファイル外の登録と生ログ */
+:root{color-scheme:light dark;--bg:light-dark(#e7e4df,#171513);--panel:light-dark(#fff,#211e1b);--ink:light-dark(#141210,#ece8e2);--mute:light-dark(#6b655d,#a39c92);--line:light-dark(#cfc9c0,#3a3631);--brick:light-dark(#c8371e,#ff6a4d);--brickbg:light-dark(#f6e0da,#3b211b);--blue:light-dark(#1f5fbf,#7fb0ff);--bluebg:light-dark(#e1eaf8,#1c2638)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 "Noto Sans JP",system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3vw,40px) max(4vw,16px)}
+.wrap{max-width:1000px;margin:0 auto}
+h1{font:700 clamp(28px,4vw,40px)/1.05 "Schibsted Grotesk","Noto Sans JP",sans-serif;letter-spacing:-.02em;margin:0 0 6px;text-wrap:balance}
+h2{font:700 19px/1.2 "Schibsted Grotesk","Noto Sans JP",sans-serif;margin:0 0 10px}
+a{color:var(--brick)}
+.meta{color:var(--mute);font-size:14px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:18px 0}
+button{font:500 15px "Noto Sans JP",sans-serif;min-height:44px;padding:8px 16px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer}
+button.p{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;background:var(--line);margin-right:6px;vertical-align:0}
+.dot.on{background:var(--blue)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;margin-top:14px}
+.head{display:flex;flex-wrap:wrap;gap:8px 28px;font-size:14px;color:var(--mute)}
+.head b{display:block;color:var(--ink);font:700 17px/1.3 "Schibsted Grotesk","Noto Sans JP",sans-serif;overflow-wrap:anywhere}
+.slots{display:grid;gap:8px;margin-top:14px}
+.slot{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.slot .n{font:700 22px/1 "Schibsted Grotesk",sans-serif}
+.slot .n small{display:block;font:500 12px "Noto Sans JP",sans-serif;color:var(--mute);margin-top:4px}
+.slot .ad{font:15px ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+.slot .ad small{display:block;font:13px "Noto Sans JP",sans-serif;color:var(--mute)}
+.tags{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.tag{font-size:13px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
+.tag.act{background:var(--brickbg);border-color:var(--brick);color:var(--brick)}
+.tag.con{background:var(--bluebg);border-color:var(--blue);color:var(--blue)}
+.slot.empty{border-style:dashed;color:var(--mute)}
+.slot.active{border-color:var(--brick);box-shadow:inset 4px 0 0 var(--brick)}
+ul{margin:0;padding-left:1.2em}
+li{font:14px ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
+pre{background:var(--bg);border-radius:8px;padding:10px;max-height:320px;overflow:auto;font:12px/1.45 ui-monospace,Menlo,Consolas,monospace;margin:10px 0 0;white-space:pre-wrap;overflow-wrap:anywhere}
+.empty-state{color:var(--mute);margin:8px 0 0}
+.warn{color:var(--brick);font-size:14px}
+ol{padding-left:1.3em;margin:6px 0 0}
+ol li{font:15px/1.6 "Noto Sans JP",sans-serif}
+code{font:13px ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
+@media(max-width:600px){.slot{grid-template-columns:48px minmax(0,1fr)}.tags{grid-column:2;justify-content:flex-start}}
+</style>
+</head>
+<body>
+<div class="band"><div class="wrap">
+  <h1>CLEAVE HHJP BTプロファイル確認</h1>
+  <div class="meta">確認用ファームウェア <code>cleave_hhjp_left-btinfo</code> を書き込んだ左手をUSB接続して読み取ります · Chrome / Edge</div>
+
+  <div class="bar">
+    <button class="p" id="bConn" type="button">シリアルポートに接続</button>
+    <button id="bDisc" type="button" disabled>切断</button>
+    <button id="bCopy" type="button" disabled>結果をテキストでコピー</button>
+    <span class="meta"><span class="dot" id="dot"></span><span id="st">未接続</span></span>
+  </div>
+  <div id="unsup" class="warn" hidden>このブラウザはWeb Serialに対応していません。Chrome または Edge で開いてください。</div>
+
+  <section class="panel" aria-labelledby="h1p">
+    <div class="head">
+      <div>デバイス名<b id="hName">—</b></div>
+      <div>キーボード自身のアドレス<b id="hId">—</b></div>
+      <div>最終更新<b id="hTime">—</b></div>
+    </div>
+    <h2 id="h1p" style="margin-top:16px">プロファイル</h2>
+    <div class="slots" id="slots"><p class="empty-state">接続すると、約10秒ごと（プロファイル切り替え時は即時）に更新されます。</p></div>
+  </section>
+
+  <section class="panel" aria-labelledby="hb">
+    <h2 id="hb">プロファイル外の登録（bond）</h2>
+    <div id="bonds" class="empty-state">—</div>
+    <p class="meta" style="margin:8px 0 0">左右分割の接続（右手側）のbondは通常ここに出ます。それ以外があれば、プロファイルから外れた古い登録の可能性があります。</p>
+  </section>
+
+  <section class="panel" aria-labelledby="hh">
+    <h2 id="hh">使い方</h2>
+    <ol>
+      <li>Actionsの最新ビルドから <code>cleave_hhjp_left-btinfo</code> のUF2を取り出し、左手に書き込みます（右手はそのまま）。</li>
+      <li>左手をUSBでPCに接続し、「シリアルポートに接続」から XIAO / ZMK のポートを選びます。</li>
+      <li>確認が終わったら、通常の <code>cleave_hhjp_left rgbled_adapter</code> を書き戻します。ペアリング情報は書き込みでは消えません。</li>
+    </ol>
+    <p class="meta">確認用ファームウェアではZMK Studioを無効にしています。表示するのはアドレスと状態だけで、ペアリングの鍵は出力しません。</p>
+  </section>
+
+  <section class="panel">
+    <details><summary>受信ログ（直近300行）</summary><pre id="raw"></pre></details>
+  </section>
+</div></div>
+<script>
+{
+const $=id=>document.getElementById(id);
+let port=null,reader=null,cur=null,last=null,raw=[];
+const typeJ=t=>({public:'公開アドレス',random:'ランダムアドレス','public-id':'公開ID','random-id':'ランダムID'}[t]||t);
+const splitAddr=s=>{const m=/^(\S+)\s*\(([^)]+)\)/.exec(s||'');return m?{a:m[1],t:typeJ(m[2])}:{a:s||'',t:''}};
+function render(){
+  if(!last)return;
+  $('hName').textContent=last.name||'—';$('hId').textContent=last.ids.map(x=>splitAddr(x).a+'（'+splitAddr(x).t+'）').join(' / ')||'—';
+  $('hTime').textContent=last.time.toLocaleTimeString('ja-JP');
+  const box=$('slots');box.textContent='';
+  last.profiles.forEach(p=>{
+    const d=document.createElement('div');d.className='slot'+(p.bonded?'':' empty')+(p.active?' active':'');
+    const n=document.createElement('div');n.className='n';n.textContent='BT'+(p.i+1);const ns=document.createElement('small');ns.textContent='index '+p.i;n.append(ns);
+    const ad=document.createElement('div');ad.className='ad';
+    if(p.bonded){const x=splitAddr(p.addr);ad.textContent=x.a;const s=document.createElement('small');s.textContent=x.t;ad.append(s)}else{ad.textContent='空き（未ペアリング）'}
+    const tg=document.createElement('div');tg.className='tags';
+    const tag=(t,c)=>{const e=document.createElement('span');e.className='tag '+(c||'');e.textContent=t;tg.append(e)};
+    if(p.active)tag('選択中','act');if(p.connected)tag('接続中','con');if(p.bonded&&!p.connected)tag('登録済');
+    d.append(n,ad,tg);box.append(d);
+  });
+  const others=last.bonds.filter(b=>b.p<0);const bx=$('bonds');bx.textContent='';
+  if(!others.length){bx.textContent='なし';return}
+  const ul=document.createElement('ul');others.forEach(b=>{const li=document.createElement('li');const x=splitAddr(b.addr);li.textContent=x.a+'（'+x.t+'）';ul.append(li)});bx.append(ul);
+}
+function line(l){
+  raw.push(l);if(raw.length>300)raw.shift();$('raw').textContent=raw.join('\n');
+  const i=l.indexOf('BTPROF|');if(i<0)return;const f=l.slice(i).trim().split('|');
+  switch(f[1]){
+    case 'BEGIN':cur={name:f[2],active:+f[3],count:+f[4],ids:[],profiles:[],bonds:[]};break;
+    case 'ID':if(cur)cur.ids.push(f.slice(2).join('|'));break;
+    case 'P':if(cur)cur.profiles.push({i:+f[2],active:f[3]==='1',bonded:f[4]==='1',connected:f[5]==='1',addr:f.slice(6).join('|')});break;
+    case 'B':if(cur)cur.bonds.push({addr:f[2],p:+f[3]});break;
+    case 'END':if(cur){cur.time=new Date();last=cur;cur=null;$('bCopy').disabled=false;render()}break;
+  }
+}
+const setSt=(t,on)=>{$('st').textContent=t;$('dot').classList.toggle('on',!!on)};
+async function connect(){
+  try{port=await navigator.serial.requestPort();await port.open({baudRate:115200})}catch(e){setSt('接続できませんでした: '+e.message);port=null;return}
+  setSt('接続中 · 受信待ち',true);$('bConn').disabled=true;$('bDisc').disabled=false;
+  const dec=new TextDecoderStream();const closed=port.readable.pipeTo(dec.writable).catch(()=>{});reader=dec.readable.getReader();let buf='';
+  try{while(true){const {value,done}=await reader.read();if(done)break;buf+=value;let k;while((k=buf.indexOf('\n'))>=0){line(buf.slice(0,k).replace(/\r$/,''));buf=buf.slice(k+1)}}}catch(e){}
+  try{reader.releaseLock()}catch(e){}await closed;try{await port.close()}catch(e){}
+  port=null;reader=null;setSt('未接続');$('bConn').disabled=false;$('bDisc').disabled=true;
+}
+$('bConn').onclick=connect;
+$('bDisc').onclick=async()=>{try{await reader.cancel()}catch(e){}};
+$('bCopy').onclick=async()=>{if(!last)return;const t=['CLEAVE HHJP BTプロファイル '+last.time.toLocaleString('ja-JP'),'デバイス名: '+last.name,'自身: '+last.ids.join(' / '),...last.profiles.map(p=>'BT'+(p.i+1)+': '+(p.bonded?p.addr:'空き')+(p.active?' [選択中]':'')+(p.connected?' [接続中]':'')),'プロファイル外: '+(last.bonds.filter(b=>b.p<0).map(b=>b.addr).join(', ')||'なし')].join('\n');
+  try{await navigator.clipboard.writeText(t);$('bCopy').textContent='コピーしました'}catch(e){$('raw').textContent=t;$('bCopy').textContent='ログ欄に表示しました'}setTimeout(()=>$('bCopy').textContent='結果をテキストでコピー',2000)};
+if(!('serial' in navigator)){$('unsup').hidden=false;$('bConn').disabled=true}
+}
+</script>
+</body>
+</html>
