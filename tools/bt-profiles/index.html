@@ -95,10 +95,10 @@ code{font:13px ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
     <h2 id="hh">使い方</h2>
     <ol>
       <li>Actionsの最新ビルドから <code>cleave_hhjp_left-btinfo</code> のUF2を取り出し、左手に書き込みます（右手はそのまま）。</li>
-      <li>左手をUSBでPCに接続し、「シリアルポートに接続」から XIAO / ZMK のポートを選びます。</li>
-      <li>確認が終わったら、通常の <code>cleave_hhjp_left rgbled_adapter</code> を書き戻します。ペアリング情報は書き込みでは消えません。</li>
+      <li>左手をUSBでPCに接続し、「シリアルポートに接続」から XIAO / ZMK のポートを選びます。ポートが2つ出るので、15秒たっても表示されない場合はもう一方を選び直してください。</li>
+      <li>そのまま普段使いもできます。デバッグログを出さない通常版に戻す場合は <code>cleave_hhjp_left rgbled_adapter</code> を書き込みます（ペアリング情報は消えません）。</li>
     </ol>
-    <p class="meta">確認用ファームウェアではZMK Studioを無効にしています。表示するのはアドレスと状態だけで、ペアリングの鍵は出力しません。ペアリング解除・全解除はキーボード側の登録だけを消します（左右分割の接続は消えません）。解除後はPC/スマホ側のBluetooth設定からもキーボードを削除してください。各操作はボタンを2回押すと実行されます。</p>
+    <p class="meta">このファームウェアはZMK Studioにも対応しています（USBシリアルポートが2つ見えます。片方がStudio用、もう片方がこのページ用）。表示するのはアドレスと状態だけで、ペアリングの鍵は出力しません。ペアリング解除・全解除はキーボード側の登録だけを消します（左右分割の接続は消えません）。解除後はPC/スマホ側のBluetooth設定からもキーボードを削除してください。各操作はボタンを2回押すと実行されます。</p>
   </section>
 
   <section class="panel">
@@ -156,7 +156,7 @@ const ACKJ={'0':'完了','-34':'番号が範囲外','-22':'不明なコマンド
 const setSt=(t,on)=>{$('st').textContent=t;$('dot').classList.toggle('on',!!on)};
 async function connect(){
   try{port=await navigator.serial.requestPort();await port.open({baudRate:115200})}catch(e){setSt('接続できませんでした: '+e.message);port=null;return}
-  setSt('接続中 · 受信待ち',true);$('bConn').disabled=true;$('bDisc').disabled=false;$('bDump').disabled=false;$('bAll').disabled=false;render();
+  setSt('接続中 · 受信待ち',true);const t0=Date.now();setTimeout(()=>{if(port&&(!last||last.time<t0))$('msg').textContent='15秒間データが届いていません。Studio用のポートを選んでいる可能性があります。切断してもう一方のポートを選んでください。'},15000);$('bConn').disabled=true;$('bDisc').disabled=false;$('bDump').disabled=false;$('bAll').disabled=false;render();
   const dec=new TextDecoderStream();const closed=port.readable.pipeTo(dec.writable).catch(()=>{});reader=dec.readable.getReader();let buf='';
   try{while(true){const {value,done}=await reader.read();if(done)break;buf+=value;let k;while((k=buf.indexOf('\n'))>=0){line(buf.slice(0,k).replace(/\r$/,''));buf=buf.slice(k+1)}}}catch(e){}
   try{reader.releaseLock()}catch(e){}await closed;try{await port.close()}catch(e){}

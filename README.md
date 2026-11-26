@@ -19,7 +19,7 @@
 - [キーマップ編集ツール](tools/keymap-editor/README.md)
   ブラウザ上で`config/cleave_hhjp.keymap`の初期キーマップを編集し、全文を出力します。
 - [BTプロファイル確認ツール](tools/bt-profiles/index.html)
-  確認用ファームウェア`cleave_hhjp_left-btinfo`を書き込んだ左手からBluetoothプロファイルの登録状況を読み取ります（Chrome / Edge）。
+  `cleave_hhjp_left-btinfo`（ZMK Studio対応）を書き込んだ左手で、Bluetoothプロファイルの確認とペアリング解除ができます（Chrome / Edge）。
   https://oogamizin.github.io/KeyBord.CLEAVE-HHJP-VerOGM/tools/keymap-editor/
 
 ## 関連リンク
