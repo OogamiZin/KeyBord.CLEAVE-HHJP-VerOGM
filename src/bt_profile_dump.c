@@ -9,6 +9,10 @@
  *   BTPROF|P|<index>|<active 0/1>|<bonded 0/1>|<connected 0/1>|<peer address>
  *   BTPROF|B|<bonded address>|<profile index or -1>
  *   BTPROF|END
+ *   BTPROF|ACK|<command>|<result>
+ *
+ * With CONFIG_CLEAVE_BT_PROFILE_CONTROL, these console commands are accepted:
+ *   BTCMD dump | BTCMD clear <index> | BTCMD clearall | BTCMD disc <index>
  */
 
 #include <zephyr/kernel.h>
@@ -16,6 +20,9 @@
 #include <zephyr/sys/printk.h>
 #include <zephyr/bluetooth/bluetooth.h>
 #include <zephyr/bluetooth/addr.h>
+#include <zephyr/drivers/uart.h>
+#include <stdlib.h>
+#include <string.h>
 
 #include <zmk/ble.h>
 #include <zmk/event_manager.h>
@@ -69,8 +76,80 @@ static int profile_changed_cb(const zmk_event_t *eh) {
 ZMK_LISTENER(cleave_bt_profile_dump, profile_changed_cb);
 ZMK_SUBSCRIPTION(cleave_bt_profile_dump, zmk_ble_active_profile_changed);
 
+#if IS_ENABLED(CONFIG_CLEAVE_BT_PROFILE_CONTROL)
+#define CMD_MAX 32
+static const struct device *cmd_uart = DEVICE_DT_GET(DT_CHOSEN(zephyr_console));
+static char rx_buf[CMD_MAX], cmd_buf[CMD_MAX];
+static size_t rx_len;
+
+static void clear_profile(uint8_t index) {
+    int prev = zmk_ble_active_profile_index();
+    if (prev != index) {
+        zmk_ble_prof_select(index);
+    }
+    zmk_ble_clear_bonds();
+    if (prev != index) {
+        zmk_ble_prof_select(prev);
+    }
+}
+
+static void cmd_work_cb(struct k_work *work) {
+    char *c = cmd_buf;
+    int rc = 0;
+    if (strncmp(c, "BTCMD ", 6) != 0) {
+        return;
+    }
+    c += 6;
+    if (strcmp(c, "dump") == 0) {
+        rc = 0;
+    } else if (strncmp(c, "clear ", 6) == 0) {
+        int i = atoi(c + 6);
+        if (i < 0 || i >= ZMK_BLE_PROFILE_COUNT) {
+            rc = -ERANGE;
+        } else {
+            clear_profile((uint8_t)i);
+        }
+    } else if (strcmp(c, "clearall") == 0) {
+        zmk_ble_clear_all_bonds();
+    } else if (strncmp(c, "disc ", 5) == 0) {
+        int i = atoi(c + 5);
+        rc = (i < 0 || i >= ZMK_BLE_PROFILE_COUNT) ? -ERANGE : zmk_ble_prof_disconnect((uint8_t)i);
+    } else {
+        rc = -EINVAL;
+    }
+    printk("BTPROF|ACK|%s|%d\n", c, rc);
+    k_work_reschedule(&dump_work, K_MSEC(300));
+}
+static K_WORK_DEFINE(cmd_work, cmd_work_cb);
+
+static void uart_cb(const struct device *dev, void *user_data) {
+    uint8_t ch;
+    if (!uart_irq_update(dev)) {
+        return;
+    }
+    while (uart_irq_rx_ready(dev) && uart_fifo_read(dev, &ch, 1) == 1) {
+        if (ch == '\r' || ch == '\n') {
+            if (rx_len > 0 && !k_work_is_pending(&cmd_work)) {
+                rx_buf[rx_len] = '\0';
+                memcpy(cmd_buf, rx_buf, rx_len + 1);
+                k_work_submit(&cmd_work);
+            }
+            rx_len = 0;
+        } else if (rx_len < CMD_MAX - 1) {
+            rx_buf[rx_len++] = (char)ch;
+        }
+    }
+}
+#endif
+
 static int bt_profile_dump_init(void) {
     k_work_schedule(&dump_work, K_SECONDS(5));
+#if IS_ENABLED(CONFIG_CLEAVE_BT_PROFILE_CONTROL)
+    if (device_is_ready(cmd_uart)) {
+        uart_irq_callback_user_data_set(cmd_uart, uart_cb, NULL);
+        uart_irq_rx_enable(cmd_uart);
+    }
+#endif
     return 0;
 }
 

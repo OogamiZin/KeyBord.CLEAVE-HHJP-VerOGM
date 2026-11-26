@@ -34,7 +34,7 @@ button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .head{display:flex;flex-wrap:wrap;gap:8px 28px;font-size:14px;color:var(--mute)}
 .head b{display:block;color:var(--ink);font:700 17px/1.3 "Schibsted Grotesk","Noto Sans JP",sans-serif;overflow-wrap:anywhere}
 .slots{display:grid;gap:8px;margin-top:14px}
-.slot{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
+.slot{display:grid;grid-template-columns:64px minmax(0,1fr) auto auto;gap:12px;align-items:center;border:1px solid var(--line);border-radius:10px;padding:12px 14px}
 .slot .n{font:700 22px/1 "Schibsted Grotesk",sans-serif}
 .slot .n small{display:block;font:500 12px "Noto Sans JP",sans-serif;color:var(--mute);margin-top:4px}
 .slot .ad{font:15px ui-monospace,Menlo,Consolas,monospace;overflow-wrap:anywhere}
@@ -43,6 +43,9 @@ button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .tag{font-size:13px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);white-space:nowrap}
 .tag.act{background:var(--brickbg);border-color:var(--brick);color:var(--brick)}
 .tag.con{background:var(--bluebg);border-color:var(--blue);color:var(--blue)}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.acts button{min-height:36px;padding:4px 10px;font-size:14px}
+button.arm{background:var(--brick);border-color:var(--brick);color:#fff}
 .slot.empty{border-style:dashed;color:var(--mute)}
 .slot.active{border-color:var(--brick);box-shadow:inset 4px 0 0 var(--brick)}
 ul{margin:0;padding-left:1.2em}
@@ -53,7 +56,7 @@ pre{background:var(--bg);border-radius:8px;padding:10px;max-height:320px;overflo
 ol{padding-left:1.3em;margin:6px 0 0}
 ol li{font:15px/1.6 "Noto Sans JP",sans-serif}
 code{font:13px ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
-@media(max-width:600px){.slot{grid-template-columns:48px minmax(0,1fr)}.tags{grid-column:2;justify-content:flex-start}}
+@media(max-width:600px){.slot{grid-template-columns:48px minmax(0,1fr)}.tags,.acts{grid-column:2;justify-content:flex-start}}
 </style>
 </head>
 <body>
@@ -65,8 +68,11 @@ code{font:13px ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
     <button class="p" id="bConn" type="button">シリアルポートに接続</button>
     <button id="bDisc" type="button" disabled>切断</button>
     <button id="bCopy" type="button" disabled>結果をテキストでコピー</button>
+    <button id="bDump" type="button" disabled>今すぐ再読込</button>
+    <button id="bAll" type="button" disabled>全プロファイルを解除</button>
     <span class="meta"><span class="dot" id="dot"></span><span id="st">未接続</span></span>
   </div>
+  <div id="msg" class="meta" aria-live="polite"></div>
   <div id="unsup" class="warn" hidden>このブラウザはWeb Serialに対応していません。Chrome または Edge で開いてください。</div>
 
   <section class="panel" aria-labelledby="h1p">
@@ -92,7 +98,7 @@ code{font:13px ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
       <li>左手をUSBでPCに接続し、「シリアルポートに接続」から XIAO / ZMK のポートを選びます。</li>
       <li>確認が終わったら、通常の <code>cleave_hhjp_left rgbled_adapter</code> を書き戻します。ペアリング情報は書き込みでは消えません。</li>
     </ol>
-    <p class="meta">確認用ファームウェアではZMK Studioを無効にしています。表示するのはアドレスと状態だけで、ペアリングの鍵は出力しません。</p>
+    <p class="meta">確認用ファームウェアではZMK Studioを無効にしています。表示するのはアドレスと状態だけで、ペアリングの鍵は出力しません。ペアリング解除・全解除はキーボード側の登録だけを消します（左右分割の接続は消えません）。解除後はPC/スマホ側のBluetooth設定からもキーボードを削除してください。各操作はボタンを2回押すと実行されます。</p>
   </section>
 
   <section class="panel">
@@ -118,7 +124,11 @@ function render(){
     const tg=document.createElement('div');tg.className='tags';
     const tag=(t,c)=>{const e=document.createElement('span');e.className='tag '+(c||'');e.textContent=t;tg.append(e)};
     if(p.active)tag('選択中','act');if(p.connected)tag('接続中','con');if(p.bonded&&!p.connected)tag('登録済');
-    d.append(n,ad,tg);box.append(d);
+    const ac=document.createElement('div');ac.className='acts';
+    const btn=(label,cmd,confirmText)=>{const b=document.createElement('button');b.type='button';b.textContent=label;b.disabled=!port;b.onclick=()=>arm(b,label,confirmText,cmd);ac.append(b)};
+    if(p.connected)btn('切断','disc '+p.i,'もう一度押すと切断');
+    if(p.bonded)btn('ペアリング解除','clear '+p.i,'もう一度押すとBT'+(p.i+1)+'を解除');
+    d.append(n,ad,tg,ac);box.append(d);
   });
   const others=last.bonds.filter(b=>b.p<0);const bx=$('bonds');bx.textContent='';
   if(!others.length){bx.textContent='なし';return}
@@ -132,19 +142,29 @@ function line(l){
     case 'ID':if(cur)cur.ids.push(f.slice(2).join('|'));break;
     case 'P':if(cur)cur.profiles.push({i:+f[2],active:f[3]==='1',bonded:f[4]==='1',connected:f[5]==='1',addr:f.slice(6).join('|')});break;
     case 'B':if(cur)cur.bonds.push({addr:f[2],p:+f[3]});break;
+    case 'ACK':{const r=f[3];$('msg').textContent='キーボード応答: '+f[2]+' → '+(ACKJ[r]||('エラー '+r))+(f[2].startsWith('clear')&&r==='0'?'。PC/スマホ側のBluetooth設定からも、このキーボードを削除してください。':'');break}
     case 'END':if(cur){cur.time=new Date();last=cur;cur=null;$('bCopy').disabled=false;render()}break;
   }
 }
+let armed=null;
+function arm(b,label,confirmText,cmd){if(armed&&armed.b!==b){armed.b.textContent=armed.label;armed.b.classList.remove('arm')}
+  if(armed&&armed.b===b){armed=null;b.classList.remove('arm');b.textContent=label;send(cmd);return}
+  armed={b,label};b.textContent=confirmText;b.classList.add('arm');setTimeout(()=>{if(armed&&armed.b===b){armed=null;b.textContent=label;b.classList.remove('arm')}},5000)}
+async function send(cmd){if(!port||!port.writable){$('msg').textContent='未接続です';return}
+  const w=port.writable.getWriter();try{await w.write(new TextEncoder().encode('BTCMD '+cmd+'\n'));$('msg').textContent='送信: '+cmd}catch(e){$('msg').textContent='送信できませんでした: '+e.message}finally{w.releaseLock()}}
+const ACKJ={'0':'完了','-34':'番号が範囲外','-22':'不明なコマンド'};
 const setSt=(t,on)=>{$('st').textContent=t;$('dot').classList.toggle('on',!!on)};
 async function connect(){
   try{port=await navigator.serial.requestPort();await port.open({baudRate:115200})}catch(e){setSt('接続できませんでした: '+e.message);port=null;return}
-  setSt('接続中 · 受信待ち',true);$('bConn').disabled=true;$('bDisc').disabled=false;
+  setSt('接続中 · 受信待ち',true);$('bConn').disabled=true;$('bDisc').disabled=false;$('bDump').disabled=false;$('bAll').disabled=false;render();
   const dec=new TextDecoderStream();const closed=port.readable.pipeTo(dec.writable).catch(()=>{});reader=dec.readable.getReader();let buf='';
   try{while(true){const {value,done}=await reader.read();if(done)break;buf+=value;let k;while((k=buf.indexOf('\n'))>=0){line(buf.slice(0,k).replace(/\r$/,''));buf=buf.slice(k+1)}}}catch(e){}
   try{reader.releaseLock()}catch(e){}await closed;try{await port.close()}catch(e){}
-  port=null;reader=null;setSt('未接続');$('bConn').disabled=false;$('bDisc').disabled=true;
+  port=null;reader=null;setSt('未接続');$('bConn').disabled=false;$('bDisc').disabled=true;$('bDump').disabled=true;$('bAll').disabled=true;render();
 }
 $('bConn').onclick=connect;
+$('bDump').onclick=()=>send('dump');
+$('bAll').onclick=()=>arm($('bAll'),'全プロファイルを解除','もう一度押すと全プロファイルを解除','clearall');
 $('bDisc').onclick=async()=>{try{await reader.cancel()}catch(e){}};
 $('bCopy').onclick=async()=>{if(!last)return;const t=['CLEAVE HHJP BTプロファイル '+last.time.toLocaleString('ja-JP'),'デバイス名: '+last.name,'自身: '+last.ids.join(' / '),...last.profiles.map(p=>'BT'+(p.i+1)+': '+(p.bonded?p.addr:'空き')+(p.active?' [選択中]':'')+(p.connected?' [接続中]':'')),'プロファイル外: '+(last.bonds.filter(b=>b.p<0).map(b=>b.addr).join(', ')||'なし')].join('\n');
   try{await navigator.clipboard.writeText(t);$('bCopy').textContent='コピーしました'}catch(e){$('raw').textContent=t;$('bCopy').textContent='ログ欄に表示しました'}setTimeout(()=>$('bCopy').textContent='結果をテキストでコピー',2000)};

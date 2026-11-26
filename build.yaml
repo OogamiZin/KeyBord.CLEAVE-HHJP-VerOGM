@@ -16,7 +16,7 @@ include:
   - board: seeeduino_xiao_ble
     shield: cleave_hhjp_left rgbled_adapter
     snippet: zmk-usb-logging
-    cmake-args: -DCONFIG_ZMK_STUDIO=n -DCONFIG_CLEAVE_BT_PROFILE_DUMP=y
+    cmake-args: -DCONFIG_ZMK_STUDIO=n -DCONFIG_CLEAVE_BT_PROFILE_DUMP=y -DCONFIG_CLEAVE_BT_PROFILE_CONTROL=y
     artifact-name: cleave_hhjp_left-btinfo
 
   # --- SoftDevice なし（nosd）版 ---

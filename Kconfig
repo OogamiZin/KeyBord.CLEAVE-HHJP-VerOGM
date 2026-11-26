@@ -13,3 +13,10 @@ config CLEAVE_BT_PROFILE_DUMP_INTERVAL_SEC
     int "Interval between dumps in seconds"
     default 10
     depends on CLEAVE_BT_PROFILE_DUMP
+
+config CLEAVE_BT_PROFILE_CONTROL
+    bool "Accept BT profile commands (unpair etc.) from the console UART"
+    depends on CLEAVE_BT_PROFILE_DUMP && UART_INTERRUPT_DRIVEN
+    help
+      Reads lines such as "BTCMD clear 2" from the console (zephyr,console)
+      so tools/bt-profiles can unpair profiles. Diagnostic builds only.
