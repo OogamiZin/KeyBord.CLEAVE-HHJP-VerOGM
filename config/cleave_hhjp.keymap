@@ -74,7 +74,7 @@
     &kp CAPS        &trans          &trans          &trans          &trans          &trans                              &trans          &trans          &kp PSCRN       &kp SLCK        &kp PAUSE_BREAK &kp UP          &trans          &kp KP_ENTER
     &trans          &kp C_VOL_DN    &kp C_VOL_UP    &kp C_MUTE      &kp C_EJECT     &trans                              &kp KP_MULTIPLY &kp KP_SLASH    &kp HOME        &kp PG_UP       &kp LEFT        &kp RIGHT       &trans
     &trans          &trans          &trans          &trans          &trans          &trans                              &kp KP_PLUS     &kp KP_MINUS    &kp END         &kp PG_DN       &kp DOWN        &trans          &trans          &trans
-    &trans          &trans          &trans          &trans          &trans          &trans                              &trans          &trans          &trans          &trans          &trans          &trans          &trans          &trans
+    &mo 2           &trans          &trans          &trans          &trans          &trans                              &trans          &trans          &trans          &trans          &mo 2           &trans          &trans          &trans
 			>;
 		};
 
@@ -82,7 +82,7 @@
 			display-name = "2:USER";
 			bindings = <
     &trans          &trans          &trans          &trans          &trans          &trans          &trans              &trans          &trans          &trans          &kp KP_SLASH    &kp KP_MULTIPLY &trans          &trans          &trans
-    &trans          &kp PG_UP       &kp HOME        &kp UP          &kp END         &trans                              &trans          &kp N7          &kp N8          &kp N9          &kp KP_MINUS    &trans          &trans          &trans
+    &trans          &kp PG_UP       &kp HOME        &kp UP          &kp END         &trans                              &trans          &kp N7          &kp N8          &kp N9          &kp KP_MINUS    &trans          &trans          &tog 3
     &trans          &kp PG_DN       &kp LEFT        &kp DOWN        &kp RIGHT       &trans                              &trans          &kp N4          &kp N5          &kp N6          &kp KP_PLUS     &trans          &trans
     &trans          &kp LC(Z)       &kp LC(X)       &kp LC(C)       &kp LC(V)       &kp LC(Y)                           &trans          &kp N1          &kp N2          &kp N3          &kp KP_ENTER    &trans          &trans          &trans
     &trans          &trans          &trans          &trans          &trans          &trans                              &kp N0          &kp KP_DOT      &trans          &trans          &trans          &trans          &trans          &trans
@@ -93,10 +93,10 @@
 			display-name = "3:System";
 			bindings = <
     &kp C_PWR       &bt1            &bt2            &bt3            &bt4            &bt5            &kp F6              &kp F7          &kp F8          &kp F9          &kp F10         &kp F11         &kp F12         &kp INS         &btclr
-    &kp CAPS        &trans          &trans          &trans          &trans          &trans                              &trans          &trans          &kp PSCRN       &kp SLCK        &kp PAUSE_BREAK &kp UP          &trans          &trans
+    &kp CAPS        &trans          &trans          &trans          &trans          &trans                              &trans          &trans          &kp PSCRN       &kp SLCK        &kp PAUSE_BREAK &kp UP          &trans          &tog 3
     &trans          &kp C_VOL_DN    &kp C_VOL_UP    &kp C_MUTE      &kp C_EJECT     &trans                              &kp STAR        &kp FSLH        &kp HOME        &kp PG_UP       &kp LEFT        &kp RIGHT       &trans
     &trans          &trans          &trans          &trans          &trans          &trans                              &kp PLUS        &kp MINUS       &kp END         &kp PG_DN       &kp DOWN        &trans          &trans          &trans
-    &trans          &trans          &trans          &trans          &trans          &trans                              &trans          &trans          &trans          &trans          &trans          &trans          &trans          &trans
+    &tog 3          &trans          &trans          &trans          &trans          &trans                              &trans          &trans          &trans          &trans          &tog 3          &trans          &trans          &trans
 			>;
 		};
 	};
