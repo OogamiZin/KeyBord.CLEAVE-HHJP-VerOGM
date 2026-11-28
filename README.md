@@ -19,8 +19,8 @@
 - [キーマップ編集ツール](tools/keymap-editor/README.md)
   ブラウザ上で`config/cleave_hhjp.keymap`の初期キーマップを編集し、全文を出力します。(下記URL)
   https://oogamizin.github.io/KeyBord.CLEAVE-HHJP-VerOGM/tools/keymap-editor/
-- [BTプロファイル確認ツール](tools/bt-profiles/index.html)
-  `cleave_hhjp_left-btinfo`（ZMK Studio対応）を書き込んだ左手で、Bluetoothプロファイルの確認とペアリング解除、ZMK Studio互換のキー割り当て変更ができます（Chrome / Edge、実機なしのデモあり）。(下記URL)
+- [CLEAVE HHJP設定ツール](tools/bt-profiles/README.md)
+  ZMK Studio互換のキー割当、マクロ定義の作成、Bluetoothプロファイルの確認・ペアリング解除、レイヤ監視ができます（Chrome / Edge、実機なしのデモあり）。(下記URL)
   https://oogamizin.github.io/KeyBord.CLEAVE-HHJP-VerOGM/tools/bt-profiles/
 
 

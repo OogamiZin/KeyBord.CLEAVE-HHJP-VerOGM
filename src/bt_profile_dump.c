@@ -8,6 +8,7 @@
  *   BTPROF|ID|<own identity address>
  *   BTPROF|P|<index>|<active 0/1>|<bonded 0/1>|<connected 0/1>|<peer address>
  *   BTPROF|B|<bonded address>|<profile index or -1>
+ *   BTPROF|LAYER|<highest active layer index>|<layer state bitmask (hex)>
  *   BTPROF|END
  *   BTPROF|ACK|<command>|<result>
  *
@@ -27,12 +28,19 @@
 #include <zmk/ble.h>
 #include <zmk/event_manager.h>
 #include <zmk/events/ble_active_profile_changed.h>
+#include <zmk/keymap.h>
+#include <zmk/events/layer_state_changed.h>
 
 static void dump_bond(const struct bt_bond_info *info, void *user_data) {
     char a[BT_ADDR_LE_STR_LEN];
     bt_addr_le_to_str(&info->addr, a, sizeof(a));
     int idx = zmk_ble_profile_index(&info->addr);
     printk("BTPROF|B|%s|%d\n", a, idx >= 0 ? idx : -1);
+}
+
+static void print_layer(void) {
+    printk("BTPROF|LAYER|%d|%x\n", zmk_keymap_highest_layer_active(),
+           (unsigned int)zmk_keymap_layer_state());
 }
 
 static void dump(void) {
@@ -57,6 +65,7 @@ static void dump(void) {
     }
 
     bt_foreach_bond(BT_ID_DEFAULT, dump_bond, NULL);
+    print_layer();
     printk("BTPROF|END\n");
 }
 
@@ -75,6 +84,18 @@ static int profile_changed_cb(const zmk_event_t *eh) {
 
 ZMK_LISTENER(cleave_bt_profile_dump, profile_changed_cb);
 ZMK_SUBSCRIPTION(cleave_bt_profile_dump, zmk_ble_active_profile_changed);
+
+/* レイヤー切替を設定ツールのレイヤ監視へ通知する */
+static void layer_work_cb(struct k_work *work) { print_layer(); }
+static K_WORK_DEFINE(layer_work, layer_work_cb);
+
+static int layer_changed_cb(const zmk_event_t *eh) {
+    k_work_submit(&layer_work);
+    return ZMK_EV_EVENT_BUBBLE;
+}
+
+ZMK_LISTENER(cleave_layer_notify, layer_changed_cb);
+ZMK_SUBSCRIPTION(cleave_layer_notify, zmk_layer_state_changed);
 
 #if IS_ENABLED(CONFIG_CLEAVE_BT_PROFILE_CONTROL)
 #define CMD_MAX 32
