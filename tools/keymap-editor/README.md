@@ -18,9 +18,10 @@
 - レイヤー複製時のレイヤー参照付け替え（例: Other0〜2 → Mac0〜2）
 - レイヤーの追加・複製・削除・並べ替え・改名（`&mo` `&lt` `&tog` `&to` `&sl` のレイヤー番号は自動で付け替え。behaviorsブロック内の参照は対象外）
 - US配列名の記号（`STAR` `PLUS` など）がJISホストで別の文字になる場合の警告
+- マクロの作成・編集・削除（`zmk,behavior-macro`）。文字列からの自動生成（JIS/US配列のPC向け）、キー入力の記録、キーコード一覧からの追加、タップ/押す/離す/待つ/離すまで待つ のステップ編集に対応。ID変更・削除時はキー割り当ても追従
 - 編集内容はブラウザのlocalStorageに保存
 
-behaviorsブロックやincludeは読み込んだファイルのまま残し、`keymap` ノードだけを再生成します。
+behaviorsブロックやincludeは読み込んだファイルのまま残し、`macros` と `keymap` ノードだけを再生成します。
 
 > [!NOTE]
 > ZMK Studioで保存した設定がある場合は、書き込み後にRestore Stock Settingsまたは`settings_reset`が必要です。
