@@ -46,6 +46,9 @@ button:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
 .acts button{min-height:36px;padding:4px 10px;font-size:14px}
 button.arm{background:var(--brick);border-color:var(--brick);color:#fff}
+.demo{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;background:var(--bluebg);border:1px solid var(--blue);border-radius:10px;padding:10px 14px;margin-bottom:10px;font-size:14px}
+.demo b{color:var(--blue)}
+.demo button{min-height:38px;padding:4px 12px;font-size:14px}
 .slot.empty{border-style:dashed;color:var(--mute)}
 .slot.active{border-color:var(--brick);box-shadow:inset 4px 0 0 var(--brick)}
 ul{margin:0;padding-left:1.2em}
@@ -66,11 +69,18 @@ code{font:13px ui-monospace,Menlo,monospace;overflow-wrap:anywhere}
 
   <div class="bar">
     <button class="p" id="bConn" type="button">シリアルポートに接続</button>
+    <button id="bDemo" type="button">デモを開始</button>
     <button id="bDisc" type="button" disabled>切断</button>
     <button id="bCopy" type="button" disabled>結果をテキストでコピー</button>
     <button id="bDump" type="button" disabled>今すぐ再読込</button>
     <button id="bAll" type="button" disabled>全プロファイルを解除</button>
     <span class="meta"><span class="dot" id="dot"></span><span id="st">未接続</span></span>
+  </div>
+  <div id="demoBar" class="demo" hidden>
+    <b>デモモード</b><span>架空のキーボードで動作を再現しています。アドレスはすべて架空です。</span>
+    <button id="dPair" type="button">機器をペアリング</button>
+    <button id="dNext" type="button">プロファイルを切り替え</button>
+    <button id="dConn" type="button">選択中を接続/切断</button>
   </div>
   <div id="msg" class="meta" aria-live="polite"></div>
   <div id="unsup" class="warn" hidden>このブラウザはWeb Serialに対応していません。Chrome または Edge で開いてください。</div>
@@ -150,7 +160,8 @@ let armed=null;
 function arm(b,label,confirmText,cmd){if(armed&&armed.b!==b){armed.b.textContent=armed.label;armed.b.classList.remove('arm')}
   if(armed&&armed.b===b){armed=null;b.classList.remove('arm');b.textContent=label;send(cmd);return}
   armed={b,label};b.textContent=confirmText;b.classList.add('arm');setTimeout(()=>{if(armed&&armed.b===b){armed=null;b.textContent=label;b.classList.remove('arm')}},5000)}
-async function send(cmd){if(!port||!port.writable){$('msg').textContent='未接続です';return}
+async function send(cmd){if(port&&port.demo){$('msg').textContent='送信: '+cmd;setTimeout(()=>demoCmd(cmd),250);return}
+  if(!port||!port.writable){$('msg').textContent='未接続です';return}
   const w=port.writable.getWriter();try{await w.write(new TextEncoder().encode('BTCMD '+cmd+'\n'));$('msg').textContent='送信: '+cmd}catch(e){$('msg').textContent='送信できませんでした: '+e.message}finally{w.releaseLock()}}
 const ACKJ={'0':'完了','-34':'番号が範囲外','-22':'不明なコマンド'};
 const setSt=(t,on)=>{$('st').textContent=t;$('dot').classList.toggle('on',!!on)};
@@ -168,7 +179,38 @@ $('bAll').onclick=()=>arm($('bAll'),'全プロファイルを解除','もう一�
 $('bDisc').onclick=async()=>{try{await reader.cancel()}catch(e){}};
 $('bCopy').onclick=async()=>{if(!last)return;const t=['CLEAVE HHJP BTプロファイル '+last.time.toLocaleString('ja-JP'),'デバイス名: '+last.name,'自身: '+last.ids.join(' / '),...last.profiles.map(p=>'BT'+(p.i+1)+': '+(p.bonded?p.addr:'空き')+(p.active?' [選択中]':'')+(p.connected?' [接続中]':'')),'プロファイル外: '+(last.bonds.filter(b=>b.p<0).map(b=>b.addr).join(', ')||'なし')].join('\n');
   try{await navigator.clipboard.writeText(t);$('bCopy').textContent='コピーしました'}catch(e){$('raw').textContent=t;$('bCopy').textContent='ログ欄に表示しました'}setTimeout(()=>$('bCopy').textContent='結果をテキストでコピー',2000)};
-if(!('serial' in navigator)){$('unsup').hidden=false;$('bConn').disabled=true}
+if(!('serial' in navigator)){$('unsup').hidden=false;$('unsup').textContent+=' デモは使えます。';$('bConn').disabled=true}
+
+/* ---- デモ ---- */
+let D=null,dTimer=null;
+const rnd=()=>Array.from({length:6},()=>Math.floor(Math.random()*256).toString(16).toUpperCase().padStart(2,'0')).join(':');
+const ts=()=>{const s=performance.now()/1000;const h=String(Math.floor(s/3600)).padStart(2,'0'),m=String(Math.floor(s/60)%60).padStart(2,'0'),x=(s%60).toFixed(3).padStart(6,'0');return '['+h+':'+m+':'+x+',000]'};
+function demoDump(){if(!D)return;
+  line(ts()+' <dbg> zmk: update_advertising: advertising from '+D.active+' with 0');
+  line('BTPROF|BEGIN|'+D.name+'|'+D.active+'|'+D.p.length);line('BTPROF|ID|'+D.id);
+  D.p.forEach((p,i)=>line('BTPROF|P|'+i+'|'+(i===D.active?1:0)+'|'+(p.a?1:0)+'|'+(p.a&&p.c?1:0)+'|'+(p.a||'-')));
+  D.p.forEach((p,i)=>{if(p.a)line('BTPROF|B|'+p.a+'|'+i)});line('BTPROF|B|'+D.split+'|-1');line('BTPROF|END');
+  clearTimeout(dTimer);dTimer=setTimeout(demoDump,10000)}
+const soon=()=>{clearTimeout(dTimer);dTimer=setTimeout(demoDump,500)};
+function demoCmd(cmd){if(!D)return;const [c,a]=cmd.split(' ');const i=+a;let rc=0;
+  if(c==='dump'){}
+  else if(c==='clear'){if(i>=0&&i<D.p.length){D.p[i]={a:'',c:false}}else rc=-34}
+  else if(c==='clearall'){D.p=D.p.map(()=>({a:'',c:false}));D.active=0}
+  else if(c==='disc'){if(i>=0&&i<D.p.length){D.p[i].c=false}else rc=-34}
+  else rc=-22;
+  line(ts()+' <dbg> zmk: '+(c==='clear'||c==='clearall'?'zmk_ble_clear_bonds()':'cmd '+cmd));line('BTPROF|ACK|'+cmd+'|'+rc);soon()}
+function demoStart(){D={name:'CLEAVE-HHJP-VerOGM',id:'E4:7B:12:9C:3A:5F (random)',active:0,split:'F1:92:6C:0E:8D:44 (random)',
+    p:[{a:'A4:83:E7:12:5B:09 (public)',c:true},{a:'5C:F3:70:9A:21:6E (random)',c:false},{a:'',c:false},{a:'D8:3A:DD:41:07:B2 (random)',c:true},{a:'',c:false}]};
+  port={demo:true};last=null;raw=[];$('demoBar').hidden=false;setSt('デモ中（架空のデータ）',true);
+  ['bConn','bDemo'].forEach(id=>$(id).disabled=true);['bDisc','bDump','bAll'].forEach(id=>$(id).disabled=false);
+  line(ts()+' <inf> usb_cdc_acm: Device configured');setTimeout(demoDump,1200);$('msg').textContent='デモを開始しました。下のボタンで解除・切断を試せます。'}
+function demoStop(){clearTimeout(dTimer);D=null;port=null;$('demoBar').hidden=true;setSt('未接続');$('bConn').disabled=!('serial' in navigator);$('bDemo').disabled=false;['bDisc','bDump','bAll'].forEach(id=>$(id).disabled=true);$('msg').textContent='デモを終了しました';last=null;$('slots').innerHTML='<p class="empty-state">接続すると、約10秒ごと（プロファイル切り替え時は即時）に更新されます。</p>';$('bonds').textContent='—';['hName','hId','hTime'].forEach(id=>$(id).textContent='—');$('bCopy').disabled=true}
+$('bDemo').onclick=demoStart;
+const realDisc=$('bDisc').onclick;$('bDisc').onclick=()=>{if(port&&port.demo){demoStop();return}realDisc()};
+$('dPair').onclick=()=>{if(!D)return;const i=D.p[D.active].a?D.p.findIndex(p=>!p.a):D.active;if(i<0){$('msg').textContent='空きプロファイルがありません（デモ）';return}
+  D.p[i]={a:rnd()+(Math.random()<.5?' (random)':' (public)'),c:true};D.active=i;$('msg').textContent='BT'+(i+1)+'に新しい機器がペアリングされました（デモ）';soon()};
+$('dNext').onclick=()=>{if(!D)return;D.active=(D.active+1)%D.p.length;line(ts()+' <dbg> zmk: zmk_ble_prof_select: profile '+D.active);soon()};
+$('dConn').onclick=()=>{if(!D)return;const p=D.p[D.active];if(!p.a){$('msg').textContent='選択中のプロファイルは未ペアリングです（デモ）';return}p.c=!p.c;soon()};
 }
 </script>
 </body>
