@@ -1,0 +1,70 @@
+{
+ "commit": "f4340554d2730c316aa703772655128a209e7fc2",
+ "short": "f434055",
+ "published": "2026-11-28T11:43:07Z",
+ "files": [
+  {
+   "key": "left",
+   "file": "cleave_hhjp-left.uf2",
+   "label": "左手（通常・ZMK Studio対応）",
+   "side": "left",
+   "size": 488960,
+   "sha256": "76274c8bb559dc14ae909bf25ec9f3db50ea67095d3ade05bdf8dd785e86fd89",
+   "source": "cleave_hhjp_left rgbled_adapter-seeeduino_xiao_ble-zmk.uf2"
+  },
+  {
+   "key": "left-btinfo",
+   "file": "cleave_hhjp-left-btinfo.uf2",
+   "label": "左手（BT確認・レイヤ監視用・ZMK Studio対応）",
+   "side": "left",
+   "size": 621568,
+   "sha256": "d9fa768c7bb7c147970cd623817ac7c52f5991f7ff1373cff1a14389f448ba3f",
+   "source": "cleave_hhjp_left-btinfo.uf2"
+  },
+  {
+   "key": "right",
+   "file": "cleave_hhjp-right.uf2",
+   "label": "右手（通常）",
+   "side": "right",
+   "size": 352768,
+   "sha256": "1342d4c96b19a0e08fd5fc58041a65c7f95b2c2536e586f977ff9c9907a2bd31",
+   "source": "cleave_hhjp_right rgbled_adapter-seeeduino_xiao_ble-zmk.uf2"
+  },
+  {
+   "key": "reset",
+   "file": "cleave_hhjp-reset.uf2",
+   "label": "設定リセット（ペアリング・保存設定を全消去）",
+   "side": "any",
+   "size": 99328,
+   "sha256": "4f0cc7db53bbc11f19510589f0de14a19fd36178f0bc7cbf84e508776dfc23ff",
+   "source": "settings_reset-seeeduino_xiao_ble-zmk.uf2"
+  },
+  {
+   "key": "left-nosd",
+   "file": "cleave_hhjp-left-nosd.uf2",
+   "label": "左手（SoftDeviceなし・RMKから戻す用）",
+   "side": "left",
+   "size": 488960,
+   "sha256": "51a259a0c6aa6fb9d8c86e38a68c0d660ffbf62aeae9bbf413d00e288b82720e",
+   "source": "cleave_hhjp_left-nosd.uf2"
+  },
+  {
+   "key": "right-nosd",
+   "file": "cleave_hhjp-right-nosd.uf2",
+   "label": "右手（SoftDeviceなし・RMKから戻す用）",
+   "side": "right",
+   "size": 352768,
+   "sha256": "26ec6c00b491a9f5f09c2610f91c2bb088172a9d7e9f5adf3919116631195acc",
+   "source": "cleave_hhjp_right-nosd.uf2"
+  },
+  {
+   "key": "reset-nosd",
+   "file": "cleave_hhjp-reset-nosd.uf2",
+   "label": "設定リセット（SoftDeviceなし）",
+   "side": "any",
+   "size": 99328,
+   "sha256": "97e6a996e74af7641e4f4b64fb7f70718ee49c70f81fb92c0dfcc040433ea824",
+   "source": "settings_reset-nosd.uf2"
+  }
+ ]
+}
