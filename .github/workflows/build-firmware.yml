@@ -11,6 +11,7 @@ on:
       - 'Kconfig'
       - 'CMakeLists.txt'
       - 'zephyr/**'
+      - '.github/scripts/**'
   pull_request:
     paths:
       - 'config/**'
@@ -20,7 +21,38 @@ on:
       - 'Kconfig'
       - 'CMakeLists.txt'
       - 'zephyr/**'
+      - '.github/scripts/**'
 
 jobs:
   build:
     uses: zmkfirmware/zmk/.github/workflows/build-user-config.yml@v0.3-branch
+
+  # main のビルド結果を GitHub Pages（firmware/）に公開し、設定ツールから直接書き込めるようにする
+  # firmware/ だけの変更では上の paths に当たらないため、公開用のコミットで再ビルドは起きない
+  publish:
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    concurrency:
+      group: publish-firmware
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/download-artifact@v4
+        with:
+          name: firmware
+          path: fw
+      - name: Publish to firmware/
+        run: |
+          python3 .github/scripts/publish_fw.py fw firmware "${GITHUB_SHA}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add firmware
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Publish firmware ${GITHUB_SHA::7} [skip ci]"
+          git pull --rebase origin main
+          git push origin HEAD:main

@@ -188,6 +188,11 @@ pre.raw { background: var(--bg); border-radius: 8px; padding: 10px; max-height: 
 dialog { color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 18px; max-width: 520px; }
 dialog::backdrop { background: rgba(0,0,0,.45); }
 dialog h2 { font-size: 16px; margin-bottom: 8px; }
+.fwtbl { border-collapse: collapse; margin: 6px 0 10px; font-size: 14px; }
+.fwtbl th { text-align: left; font-weight: 600; color: var(--sub); padding: 3px 14px 3px 0; border: 0; }
+.fwtbl td { font-family: var(--mono); border: 0; }
+#btnFw.upd { background: #e8590c; }
+#btnFw.upd::after { content: ' ●'; }
 .fwbtns { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 10px; }
 .fwbtns .grow { flex: 1; }
 #vjFloat { position: fixed; top: 70px; right: 16px; width: min(820px, calc(100vw - 32px)); z-index: 60; border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.3); overflow: hidden; background: var(--bg); padding: 8px 10px; }
@@ -260,6 +265,7 @@ body.pip .nopip { display: none; }
   </ul>
   <p>キー割当の変更は右上の「書込」でまとめてキーボードに書き込みます。「エクスポート」「インポート」で、全体を .keymap 形式で保存・読み込みできます。<br>キーボードが手元にない場合は「デモで試す」で、模擬キーボードを相手に一通りの操作を試せます。</p>
   <p>BT とレイヤ監視には、確認用ファームウェア <code>cleave_hhjp_left-btinfo</code> のログ用ポートへの接続が必要です（接続後に「ログポートに接続」）。キー割当は通常の左手用ファームウェアでも使えます（ZMK Studio 対応ビルド）。</p>
+  <p id="introFw"></p>
   <p>GitHub リポジトリ: <a href="https://github.com/OogamiZin/KeyBord.CLEAVE-HHJP-VerOGM" target="_blank" rel="noopener">OogamiZin/KeyBord.CLEAVE-HHJP-VerOGM</a> ・ <a href="../keymap-editor/">キーマップ編集ツール（.keymap の作成）</a></p>
 </div>
 
@@ -448,18 +454,25 @@ body.pip .nopip { display: none; }
 <div id="tip" hidden></div>
 
 <dialog id="dlgFw">
-  <h2>ファームウェアの書き込み</h2>
-  <ol class="hint" style="padding-left:1.3em">
-    <li>必要に応じ今の設定を「エクスポート」で保存します。</li>
-    <li><a href="https://github.com/OogamiZin/KeyBord.CLEAVE-HHJP-VerOGM/actions/workflows/build-firmware.yml" target="_blank" rel="noopener">GitHub Actions のビルド</a>から firmware をダウンロードして展開し、書き込む UF2 を用意します（左手: <code>cleave_hhjp_left…</code>、右手: <code>cleave_hhjp_right…</code>）。</li>
-    <li>書き込む側の XIAO のリセットボタンを素早く2回押すか、<code>&amp;bootloader</code> のキーを押して、書き込みモード（XIAO-SENSE などのドライブ）にします。</li>
-    <li>「UF2 を選ぶ」→「ドライブを選んで書き込む」でそのドライブを選びます。書き込みが終わると自動で再起動します。</li>
+  <h2>ファームウェア</h2>
+  <table class="fwtbl">
+    <tr><th>キーボード（左手）</th><td id="fwCur">確認中…</td></tr>
+    <tr><th>公開中の最新版</th><td id="fwNew">確認中…</td></tr>
+  </table>
+  <p><label>書き込むファームウェア <select id="fwSel" style="max-width:100%"></select></label></p>
+  <ol class="hint" id="fwSteps" style="padding-left:1.3em">
+    <li>必要に応じ今の設定を「エクスポート」で保存します（キーボード上で保存した割り当ては、書き込み後もそのまま残ります）。</li>
+    <li>「更新を始める」で、書き込む側の XIAO を書き込みモードにします。<span id="fwHow"></span></li>
+    <li>キーボードが「XIAO-SENSE」などのドライブとして現れたら、「ドライブを選んで書き込む」でそのドライブを選びます。</li>
+    <li>書き込みが終わると、キーボードは自動で再起動します。左右とも更新するときは、もう一方も同じ手順で書き込みます。</li>
   </ol>
   <p id="fwMsg" class="hint"></p>
   <div class="fwbtns">
     <button id="fwExport">エクスポート</button>
-    <button id="fwFile">UF2 を選ぶ</button><input type="file" id="fwInput" accept=".uf2" hidden>
-    <button id="fwPick" class="primary" disabled>ドライブを選んで書き込む</button>
+    <button id="fwStart" class="primary">更新を始める</button>
+    <button id="fwPick" class="primary">ドライブを選んで書き込む</button>
+    <button id="fwSave" title="ドライブに手でコピーする場合">ファイルを保存</button>
+    <button id="fwFile" title="Actions などから取り出した UF2 を使う">手元の UF2 を使う</button><input type="file" id="fwInput" accept=".uf2" hidden>
     <span class="grow"></span>
     <button id="fwClose">閉じる</button>
   </div>
@@ -752,6 +765,7 @@ function logLine(l){RAW.push(l);if(RAW.length>300)RAW.shift();if(tab==='bt')$('r
     case 'ID':if(CUR)CUR.ids.push(f.slice(2).join('|'));break;
     case 'P':if(CUR)CUR.profiles.push({i:+f[2],active:f[3]==='1',bonded:f[4]==='1',connected:f[5]==='1',addr:f.slice(6).join('|')});break;
     case 'B':if(CUR)CUR.bonds.push({addr:f[2],p:+f[3]});break;
+    case 'FW':G.fw=f[2];fwBadge();if($('dlgFw').open)fwRender();break;
     case 'LAYER':{const h=+f[2];if(G.live!==h){G.live=h;G.disp=h;if(tab==='disp')renderDisp();else if(tab==='keys')renderKeys()}break}
     case 'ACK':{const r=f[3];toast('btToast','キーボード応答: '+f[2]+' → '+(r==='0'?'完了':'エラー '+r)+(f[2].startsWith('clear')&&r==='0'?'。PC/スマホ側のBluetooth設定からも削除してください':''),r==='0');break}
     case 'END':if(CUR){CUR.time=new Date();LAST=CUR;CUR=null;if(tab==='bt')renderBt()}break;
@@ -865,11 +879,36 @@ async function importAll(text){const ls=parseKeymapFile(text);if(!ls.length){hdr
   let n=0,errs=[];ls.slice(0,S.layers.length).forEach((l,li)=>{const r=applyLayerTokens(li,l.toks);n+=r.n;errs=errs.concat(r.errs.map(e=>(S.layers[li].name||li)+' '+e))});
   hdr(n+' キーを書き込んでいない変更として取り込みました'+(errs.length?'（'+errs.length+' 件取り込めず: '+errs.slice(0,2).join(' / ')+'）':'')+'。確かめてから「書込」してください',!errs.length);rerender()}
 
-/* ================= ファーム書き込み ================= */
-let fwFile=null;
-async function fwWrite(){if(!fwFile)return;if(!('showDirectoryPicker' in window)){$('fwMsg').textContent='このブラウザはドライブへの書き込みに対応していません。UF2 ファイルをドライブに手でコピーしてください。';return}
-  try{const dir=await window.showDirectoryPicker({mode:'readwrite'});const fh=await dir.getFileHandle(fwFile.name,{create:true});const w=await fh.createWritable();await w.write(await fwFile.arrayBuffer());try{await w.close()}catch(e){}$('fwMsg').textContent='書き込みました。キーボードが自動で再起動します（ドライブが消えるときにエラーが出ても正常です）。'}
-  catch(e){$('fwMsg').textContent=(e.name==='AbortError'?'やめました':'書き込みで問題がありました（再起動でドライブが外れた場合は正常です）: '+e.message)}}
+/* ================= ファーム更新 ================= */
+let FWL=null,fwLocal=null;G.fw=null;
+async function fwLatest(){if(FWL)return FWL;try{const r=await fetch('../../firmware/latest.json',{cache:'no-store'});if(r.ok){FWL=await r.json();return FWL}}catch(e){}return null}
+const fwDate=s=>{try{return new Date(s).toLocaleString('ja-JP')}catch(e){return s}};
+function fwBadge(){const b=$('btnFw');const upd=!!(FWL&&G.fw&&G.fw!=='unknown'&&!FWL.commit.startsWith(G.fw));b.classList.toggle('upd',upd);b.title=upd?'新しいファームウェアがあります（キーボード '+G.fw+' → 公開中 '+FWL.short+'）':'ファームウェアの版の確認と更新'}
+function bootKeys(){if(!S)return '';const out=[];S.layers.forEach((l,li)=>l.bindings.forEach((b,pos)=>{if(kindOf(b)==='bootloader')out.push((l.name||li)+' の '+PN[pos]+'（'+(posName(pos).startsWith('左')?'左手':'右手')+'）')}));return out.join('、')}
+function fwSelected(){if(fwLocal)return{local:true,file:fwLocal.name,label:'手元のファイル: '+fwLocal.name,side:'any',size:fwLocal.size};const f=FWL&&FWL.files.find(x=>x.key===$('fwSel').value);return f||null}
+function fwRender(){const f=fwSelected();const side=f?f.side:'left';
+  $('fwCur').textContent=LOG?(LOG.demo?'デモ':(G.fw||'確認中…（ログポートの通知待ち）')):'不明（確認用ファームウェアのログポートに接続すると表示）';
+  $('fwNew').textContent=FWL?FWL.short+'（'+fwDate(FWL.published)+'）':'取得できません（GitHub Pages の firmware/latest.json）';
+  const bk=bootKeys();$('fwHow').textContent=(side==='left'&&LOG&&!LOG.demo?'左手はこのボタンで自動的に書き込みモードになります。':'')+'手動では、XIAO のリセットボタンを素早く2回押すか、'+(bk?bk+' の':'')+' &bootloader キーを押します（押したキーがある側が書き込みモードになります）。';
+  $('fwStart').textContent=side==='left'&&LOG?'更新を始める（左手を書き込みモードに）':'更新を始める';$('fwPick').disabled=!f;$('fwSave').disabled=!f||f.local;fwBadge()}
+async function fwOpen(){await fwLatest();$('fwSel').innerHTML=(FWL?FWL.files.map(f=>'<option value="'+esc(f.key)+'">'+esc(f.label)+'（'+Math.round(f.size/1024)+' KB）</option>').join(''):'');
+  const pref=LOG&&!LOG.demo?'left-btinfo':'left';if(FWL&&FWL.files.some(f=>f.key===pref))$('fwSel').value=pref;fwLocal=null;$('fwMsg').textContent='';fwRender();$('dlgFw').showModal()}
+async function fwBytes(f){if(f.local)return new Uint8Array(await fwLocal.arrayBuffer());const r=await fetch('../../firmware/'+f.file,{cache:'no-store'});if(!r.ok)throw new Error('ファームウェアを取得できませんでした（'+r.status+'）');const buf=new Uint8Array(await r.arrayBuffer());
+  if(f.sha256&&crypto.subtle){const h=[...new Uint8Array(await crypto.subtle.digest('SHA-256',buf))].map(x=>x.toString(16).padStart(2,'0')).join('');if(h!==f.sha256)throw new Error('ダウンロードしたファイルが壊れています（ハッシュ不一致）')}return buf}
+async function fwStart(){const f=fwSelected();if(!f)return;if(f.side==='left'&&LOG&&!LOG.demo){await logSend('boot');$('fwMsg').textContent='左手を書き込みモードにしました。XIAO-SENSE などのドライブが現れたら「ドライブを選んで書き込む」を押してください。';return}
+  if(LOG&&LOG.demo){$('fwMsg').textContent='デモ：書き込みモードになったものとして進めます。「ドライブを選んで書き込む」で、書き込み先のフォルダを選んで試せます。';return}
+  $('fwMsg').textContent='書き込む側の XIAO を書き込みモードにしてください（リセットボタンを素早く2回、または &bootloader キー）。ドライブが現れたら「ドライブを選んで書き込む」を押します。'}
+async function fwWrite(){const f=fwSelected();if(!f)return;if(!('showDirectoryPicker' in window)){$('fwMsg').textContent='このブラウザはドライブへの書き込みに対応していません。「ファイルを保存」して、ドライブに手でコピーしてください。';return}
+  let data;try{$('fwMsg').textContent='ファームウェアを用意しています…';data=await fwBytes(f)}catch(e){$('fwMsg').textContent=e.message;return}
+  let dir;try{dir=await window.showDirectoryPicker({mode:'readwrite'})}catch(e){$('fwMsg').textContent='やめました';return}
+  let isBoot=true;try{await dir.getFileHandle('INFO_UF2.TXT')}catch(e){isBoot=false}
+  if(!isBoot&&!(LOG&&LOG.demo)&&!await confirmDlg('書き込み先の確認','「'+dir.name+'」は XIAO の書き込みモードのドライブではないようです（INFO_UF2.TXT がありません）。このまま書き込みますか？','書き込む'))return;
+  try{const name=f.file;const fh=await dir.getFileHandle(name,{create:true});const w=await fh.createWritable();await w.write(data);try{await w.close()}catch(e){}
+    $('fwMsg').textContent='書き込みました（'+Math.round(data.length/1024)+' KB）。キーボードが自動で再起動します。'+(LOG&&!LOG.demo?'再起動後、必要ならログポートに接続し直してください。':'')}
+  catch(e){$('fwMsg').textContent='書き込みの最後にドライブが外れた場合は正常です（キーボードが再起動します）。それ以外のエラー: '+e.message}}
+async function fwSave(){const f=fwSelected();if(!f||f.local)return;try{const d=await fwBytes(f);const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([d]));a.download=f.file;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);$('fwMsg').textContent=f.file+' を保存しました。書き込みモードのドライブにコピーしてください。'}catch(e){$('fwMsg').textContent=e.message}}
+async function introFw(){const L=await fwLatest();const el=$('introFw');if(!L){el.textContent='';return}const pick=k=>L.files.find(f=>f.key===k);const ls=['left','right','left-btinfo'].map(pick).filter(Boolean);
+  el.innerHTML='最新ファームウェア（'+esc(L.short)+'・'+esc(fwDate(L.published))+'）: '+ls.map(f=>'<a href="../../firmware/'+esc(f.file)+'" download="'+esc(f.file)+'">'+esc(f.label)+'</a>').join(' ／ ')+'<br>書き込み方: XIAO を書き込みモード（リセットボタンを素早く2回）にして、ファイルをドライブにコピーします。接続後の「ファーム更新」からも更新できます。'}
 
 /* ================= デモ ================= */
 const HID={name:'Key',hidUsage:{keyboardMax:255,consumerMax:1023}},LYR={name:'Layer',layerId:{}};
@@ -902,7 +941,7 @@ async function startDemo(){
 }
 function startDemoLog(){
   const D={name:'CLEAVE-HHJP-VerOGM',id:'E4:7B:12:9C:3A:5F (random)',active:0,split:'F1:92:6C:0E:8D:44 (random)',p:[{a:'A4:83:E7:12:5B:09 (public)',c:true},{a:'5C:F3:70:9A:21:6E (random)',c:false},{a:'',c:false},{a:'D8:3A:DD:41:07:B2 (random)',c:true},{a:'',c:false}]};
-  let timer=null;const dump=()=>{logLine('[demo] <dbg> zmk: update_advertising');logLine('BTPROF|BEGIN|'+D.name+'|'+D.active+'|5');logLine('BTPROF|ID|'+D.id);D.p.forEach((p,i)=>logLine('BTPROF|P|'+i+'|'+(i===D.active?1:0)+'|'+(p.a?1:0)+'|'+(p.a&&p.c?1:0)+'|'+(p.a||'-')));D.p.forEach((p,i)=>{if(p.a)logLine('BTPROF|B|'+p.a+'|'+i)});logLine('BTPROF|B|'+D.split+'|-1');logLine('BTPROF|LAYER|'+VJ.highest()+'|'+VJ.mask().toString(16));logLine('BTPROF|END');clearTimeout(timer);timer=setTimeout(dump,10000)};
+  let timer=null;const dump=()=>{logLine('[demo] <dbg> zmk: update_advertising');logLine('BTPROF|BEGIN|'+D.name+'|'+D.active+'|5');logLine('BTPROF|FW|'+(FWL?FWL.short:'demo000'));logLine('BTPROF|ID|'+D.id);D.p.forEach((p,i)=>logLine('BTPROF|P|'+i+'|'+(i===D.active?1:0)+'|'+(p.a?1:0)+'|'+(p.a&&p.c?1:0)+'|'+(p.a||'-')));D.p.forEach((p,i)=>{if(p.a)logLine('BTPROF|B|'+p.a+'|'+i)});logLine('BTPROF|B|'+D.split+'|-1');logLine('BTPROF|LAYER|'+VJ.highest()+'|'+VJ.mask().toString(16));logLine('BTPROF|END');clearTimeout(timer);timer=setTimeout(dump,10000)};
   LOG={demo:true,D,stop:()=>clearTimeout(timer),cmd:c=>{const [a,b]=c.split(' ');const i=+b;let rc=0;if(a==='clear'){if(D.p[i])D.p[i]={a:'',c:false};else rc=-34}else if(a==='clearall'){D.p=D.p.map(()=>({a:'',c:false}));D.active=0}else if(a==='disc'){if(D.p[i])D.p[i].c=false;else rc=-34}else if(a!=='dump')rc=-22;
     setTimeout(()=>{logLine('BTPROF|ACK|'+c+'|'+rc);clearTimeout(timer);timer=setTimeout(dump,400)},200)},bt:(op,n)=>{if(op===3){D.active=n;if(!D.p[n].a)D.p[n]={a:Array.from({length:6},()=>Math.floor(Math.random()*256).toString(16).toUpperCase().padStart(2,'0')).join(':')+' (random)',c:true}}else if(op===1)D.active=(D.active+1)%5;else if(op===2)D.active=(D.active+4)%5;else if(op===0)D.p[D.active]={a:'',c:false};else if(op===4)D.p=D.p.map(()=>({a:'',c:false}));else if(op===5&&D.p[n])D.p[n].c=false;clearTimeout(timer);timer=setTimeout(dump,300)}};
   logBadge();setTimeout(dump,800)}
@@ -949,8 +988,8 @@ $('btnWrite').onclick=writeAll;$('btnExport').onclick=exportAll;$('btnImport').o
 $('fileAll').onchange=e=>{const f=e.target.files[0];if(f)f.text().then(importAll);e.target.value=''};
 $('btnLog').onclick=()=>{if(S&&S.demo&&!LOG){startDemoLog();return}logConnect()};
 $('btnVj').onclick=()=>$('vjFloat').hidden?vjOpen():vjClose();$('vjClose').onclick=vjClose;$('vjClear').onclick=()=>{$('vjOut').value=''};
-$('btnFw').onclick=()=>{$('fwMsg').textContent=fwFile?'選択中: '+fwFile.name:'';$('dlgFw').showModal()};$('fwClose').onclick=()=>$('dlgFw').close();$('fwExport').onclick=exportAll;
-$('fwFile').onclick=()=>$('fwInput').click();$('fwInput').onchange=e=>{fwFile=e.target.files[0]||null;$('fwPick').disabled=!fwFile;$('fwMsg').textContent=fwFile?'選択中: '+fwFile.name+'（'+Math.round(fwFile.size/1024)+' KB）':''};$('fwPick').onclick=fwWrite;
+$('btnFw').onclick=fwOpen;$('fwClose').onclick=()=>$('dlgFw').close();$('fwExport').onclick=()=>S?exportAll():null;$('fwSel').onchange=()=>{fwLocal=null;fwRender()};$('fwStart').onclick=fwStart;$('fwSave').onclick=fwSave;
+$('fwFile').onclick=()=>$('fwInput').click();$('fwInput').onchange=e=>{fwLocal=e.target.files[0]||null;e.target.value='';$('fwMsg').textContent=fwLocal?'手元のファイル '+fwLocal.name+'（'+Math.round(fwLocal.size/1024)+' KB）を書き込みます':'';fwRender()};$('fwPick').onclick=fwWrite;
 /* キー割当 */
 const onChips=(id,isDisp)=>$(id).addEventListener('click',e=>{const t=e.target.closest('[data-trig]');if(t){G.trig=isDisp?'d':'k';G.thl=null;rerender();return}const c=e.target.closest('[data-l]');if(!c)return;G.trig=null;if(isDisp)G.disp=+c.dataset.l;else G.cur=+c.dataset.l;rerender()});
 onChips('kTabs',false);onChips('dChips',true);
@@ -1010,7 +1049,7 @@ document.addEventListener('keydown',e=>{if(!G.capture)return;const c=codeOf(e);i
   if(G.capture==='k')applyText('&kp '+k,true);else{insertSrc('{'+macroTok(k)+'}');G.capture=false;$('mCapture').classList.remove('on');$('mCapture').textContent='キー入力を取り込む'}});
 window.addEventListener('beforeunload',e=>{if(S&&S.pend&&S.pend.size){e.preventDefault();e.returnValue=''}});
 if(!('serial' in navigator)){$('banner').hidden=false;$('banner').textContent='このブラウザは Web Serial に対応していないため、キーボードに接続できません。Chrome か Edge で開いてください（「デモで試す」は使えます）。'}
-logBadge();
+logBadge();introFw().then(fwBadge);
 }
 </script>
 </body>

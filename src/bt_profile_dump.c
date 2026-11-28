@@ -5,6 +5,7 @@
  * Bluetooth profile / bond info dump for CLEAVE HHJP (central side).
  * Output format (one record per line):
  *   BTPROF|BEGIN|<device name>|<active profile>|<profile count>
+ *   BTPROF|FW|<firmware commit (short)>
  *   BTPROF|ID|<own identity address>
  *   BTPROF|P|<index>|<active 0/1>|<bonded 0/1>|<connected 0/1>|<peer address>
  *   BTPROF|B|<bonded address>|<profile index or -1>
@@ -14,6 +15,7 @@
  *
  * With CONFIG_CLEAVE_BT_PROFILE_CONTROL, these console commands are accepted:
  *   BTCMD dump | BTCMD clear <index> | BTCMD clearall | BTCMD disc <index>
+ *   BTCMD boot（このキーボード（左手）をUF2書き込みモードで再起動）| BTCMD reset
  */
 
 #include <zephyr/kernel.h>
@@ -24,6 +26,12 @@
 #include <zephyr/drivers/uart.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zephyr/sys/reboot.h>
+#include <dt-bindings/zmk/reset.h>
+
+#ifndef CLEAVE_FW_SHA
+#define CLEAVE_FW_SHA "unknown"
+#endif
 
 #include <zmk/ble.h>
 #include <zmk/event_manager.h>
@@ -48,6 +56,7 @@ static void dump(void) {
     int active = zmk_ble_active_profile_index();
 
     printk("BTPROF|BEGIN|%s|%d|%d\n", CONFIG_BT_DEVICE_NAME, active, ZMK_BLE_PROFILE_COUNT);
+    printk("BTPROF|FW|%s\n", CLEAVE_FW_SHA);
 
     bt_addr_le_t ids[CONFIG_BT_ID_MAX];
     size_t count = CONFIG_BT_ID_MAX;
@@ -135,6 +144,12 @@ static void cmd_work_cb(struct k_work *work) {
     } else if (strncmp(c, "disc ", 5) == 0) {
         int i = atoi(c + 5);
         rc = (i < 0 || i >= ZMK_BLE_PROFILE_COUNT) ? -ERANGE : zmk_ble_prof_disconnect((uint8_t)i);
+    } else if (strcmp(c, "boot") == 0 || strcmp(c, "reset") == 0) {
+        bool boot = c[0] == 'b';
+        printk("BTPROF|ACK|%s|0\n", c);
+        k_msleep(300); /* ACK を送り切ってから再起動する */
+        sys_reboot(boot ? RST_UF2 : RST_COLD);
+        return;
     } else {
         rc = -EINVAL;
     }
